@@ -71,6 +71,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (paymentMethod !== "VENUE") {
+        return NextResponse.json(
+          { success: false, error: "Online payments must be confirmed through Razorpay verification." },
+          { status: 400 }
+        );
+      }
+
       const result = confirmBooking({
         holdToken,
         courtId: courtId as CourtId,
@@ -81,7 +88,8 @@ export async function POST(request: NextRequest) {
         customerEmail,
         teamName,
         sportType,
-        paymentMethod,
+        paymentMethod: paymentMethod === "VENUE" ? "VENUE" : "UPI",
+        paymentStatus: paymentMethod === "VENUE" ? "PENDING" : "PAID",
       });
 
       if (!result.success) {
