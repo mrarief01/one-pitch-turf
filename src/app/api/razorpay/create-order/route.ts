@@ -3,9 +3,16 @@ import Razorpay from "razorpay";
 import {
   calculateAvailability,
   holdSlots,
+  attachOrderToHold,
   CourtId,
   COURTS,
 } from "@/lib/bookingStore";
+
+export const runtime = "nodejs";
+
+function isCourtId(value: unknown): value is CourtId {
+  return value === "C1" || value === "C2" || value === "F";
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,22 +26,31 @@ export async function POST(request: NextRequest) {
       customerEmail,
     } = body;
 
-    if (!courtId || !date || !slotIds || slotIds.length === 0) {
+    if (!isCourtId(courtId) || typeof date !== "string" || !Array.isArray(slotIds) || slotIds.length === 0) {
       return NextResponse.json(
         { success: false, error: "Missing court, date, or time slots." },
         { status: 400 }
       );
     }
 
-    if (!customerName || !customerPhone) {
+    if (typeof customerName !== "string" || typeof customerPhone !== "string" || !customerName.trim() || customerPhone.replace(/\D/g, "").length < 10) {
       return NextResponse.json(
         { success: false, error: "Please enter player name and mobile number." },
         { status: 400 }
       );
     }
 
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keyId || !keySecret || keyId.includes("your_key") || keySecret.includes("your_razorpay")) {
+      return NextResponse.json(
+        { success: false, error: "Razorpay is not configured. Add valid Razorpay API keys to .env.local." },
+        { status: 503 }
+      );
+    }
+
     // 1. Verify real-time availability before creating order
-    const availability = calculateAvailability(courtId as CourtId, date);
+    const availability = calculateAvailability(courtId, date);
     for (const slotId of slotIds) {
       const slot = availability.find((s) => s.id === slotId);
       if (!slot || slot.status !== "AVAILABLE") {
@@ -49,14 +65,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Calculate exact total price in INR
-    const court = COURTS[courtId as CourtId];
+    const court = COURTS[courtId];
     const duration = slotIds.length;
     const amountInRupees = court.pricePerHour * duration;
     const amountInPaise = amountInRupees * 100;
 
     // 3. Place temporary hold on slots during checkout
     const holdResult = holdSlots({
-      courtId: courtId as CourtId,
+      courtId,
       date,
       slotIds,
       customerName,
@@ -72,50 +88,29 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Initialize Razorpay Order
-    const keyId =
-      process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-      process.env.RAZORPAY_KEY_ID ||
-      "rzp_test_placeholder_key";
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || "placeholder_secret_key";
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+    const order = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency: "INR",
+      receipt: (holdResult.holdToken || `rcpt_${Date.now()}`).slice(0, 40),
+      notes: {
+        courtId,
+        date,
+        slotCount: String(duration),
+        turfName: "OnePitch Arena",
+      },
+    });
 
-    let orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-    // If real Razorpay keys are provided, create live order through Razorpay SDK
-    if (
-      keyId &&
-      keySecret &&
-      !keyId.includes("placeholder") &&
-      !keySecret.includes("placeholder")
-    ) {
-      try {
-        const razorpay = new Razorpay({
-          key_id: keyId,
-          key_secret: keySecret,
-        });
-
-        const order = await razorpay.orders.create({
-          amount: amountInPaise,
-          currency: "INR",
-          receipt: holdResult.holdToken || `rcpt_${Date.now()}`,
-          notes: {
-            courtId,
-            date,
-            slotCount: String(duration),
-            customerName,
-            customerPhone,
-            turfName: "OnePitch Arena",
-          },
-        });
-
-        orderId = order.id;
-      } catch (rzpErr: unknown) {
-        console.warn("Razorpay live order error, falling back to secure test order:", rzpErr);
-      }
+    if (!holdResult.holdToken || !attachOrderToHold(holdResult.holdToken, order.id)) {
+      return NextResponse.json(
+        { success: false, error: "Your checkout hold expired. Please select the slots again." },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      orderId,
+      orderId: order.id,
       amount: amountInRupees,
       amountInPaise,
       currency: "INR",

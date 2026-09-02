@@ -3,6 +3,25 @@
 import React, { useState, useEffect } from "react";
 import { CourtId, COURTS, CalculatedSlot, BookingRecord } from "@/lib/bookingStore";
 
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+function loadRazorpayCheckout(): Promise<void> {
+  if (window.Razorpay) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => (window.Razorpay ? resolve() : reject(new Error("Razorpay checkout failed to load.")));
+    script.onerror = () => reject(new Error("Unable to load Razorpay checkout. Check your internet connection."));
+    document.body.appendChild(script);
+  });
+}
+
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -87,19 +106,89 @@ export default function BookingModal({
     setIsSubmitting(true);
 
     try {
+      const bookingPayload = {
+        courtId: selectedCourt,
+        date: selectedDate,
+        slotIds: selectedSlots.map((s) => s.id),
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerEmail: customerEmail.trim(),
+        teamName: teamName.trim() || undefined,
+        sportType,
+      };
+
+      if (paymentMethod === "UPI") {
+        const orderResponse = await fetch("/api/razorpay/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bookingPayload),
+        });
+        const orderData = await orderResponse.json();
+        if (!orderResponse.ok || !orderData.success) {
+          setErrorMessage(orderData.error || "Unable to start Razorpay payment.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        await loadRazorpayCheckout();
+        if (!window.Razorpay) throw new Error("Razorpay checkout is unavailable.");
+
+        const razorpay = new window.Razorpay({
+          key: orderData.keyId,
+          amount: orderData.amountInPaise,
+          currency: orderData.currency,
+          name: "OnePitch Arena",
+          description: `${court.name} booking on ${selectedDate}`,
+          order_id: orderData.orderId,
+          prefill: {
+            name: bookingPayload.customerName,
+            contact: bookingPayload.customerPhone,
+            email: bookingPayload.customerEmail,
+          },
+          theme: { color: "#ffb13c" },
+          modal: {
+            ondismiss: () => {
+              setIsSubmitting(false);
+              setErrorMessage("Payment was cancelled. Your slots remain held for a short time.");
+            },
+          },
+          handler: async (payment: Record<string, string>) => {
+            try {
+              const verifyResponse = await fetch("/api/razorpay/verify-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  ...bookingPayload,
+                  holdToken: orderData.holdToken,
+                  razorpay_order_id: payment.razorpay_order_id,
+                  razorpay_payment_id: payment.razorpay_payment_id,
+                  razorpay_signature: payment.razorpay_signature,
+                }),
+              });
+              const verifyData = await verifyResponse.json();
+              if (!verifyResponse.ok || !verifyData.success) {
+                setErrorMessage(verifyData.error || "Payment could not be verified. Please contact us with your payment ID.");
+                setIsSubmitting(false);
+                return;
+              }
+              onBookingSuccess(verifyData.booking);
+            } catch (error) {
+              console.error(error);
+              setErrorMessage("Payment completed, but verification could not be reached. Please contact us before trying again.");
+              setIsSubmitting(false);
+            }
+          },
+        });
+        razorpay.open();
+        return;
+      }
+
       const response = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "confirm",
-          courtId: selectedCourt,
-          date: selectedDate,
-          slotIds: selectedSlots.map((s) => s.id),
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
-          customerEmail: customerEmail.trim(),
-          teamName: teamName.trim() || undefined,
-          sportType,
+          ...bookingPayload,
           paymentMethod,
         }),
       });

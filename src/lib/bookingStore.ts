@@ -84,7 +84,7 @@ export interface BookingRecord {
   teamName?: string;
   sportType?: string;
   status: "CONFIRMED" | "HELD" | "CANCELLED";
-  paymentMethod: "UPI";
+  paymentMethod: "UPI" | "VENUE";
   paymentStatus: "PAID" | "PENDING";
   paymentId?: string;
   orderId?: string;
@@ -472,6 +472,15 @@ export function holdSlots(params: {
   };
 }
 
+/** Associates a Razorpay order with the temporary hold that created it. */
+export function attachOrderToHold(holdToken: string, orderId: string): boolean {
+  const hold = store.bookings.find((booking) => booking.id === holdToken && booking.status === "HELD");
+  if (!hold || !hold.heldUntil || hold.heldUntil <= Date.now()) return false;
+
+  hold.orderId = orderId;
+  return true;
+}
+
 /**
  * Atomically confirms booking after Razorpay payment verification.
  */
@@ -485,6 +494,8 @@ export function confirmBooking(params: {
   customerEmail: string;
   teamName?: string;
   sportType?: string;
+  paymentMethod?: "UPI" | "VENUE";
+  paymentStatus?: "PAID" | "PENDING";
   paymentId?: string;
   orderId?: string;
 }): { success: boolean; booking?: BookingRecord; error?: string } {
@@ -496,6 +507,18 @@ export function confirmBooking(params: {
 
     if (existingHoldIndex !== -1) {
       const holdRecord = store.bookings[existingHoldIndex];
+
+      if (
+        !holdRecord.heldUntil ||
+        holdRecord.heldUntil <= Date.now() ||
+        (params.orderId !== undefined && holdRecord.orderId !== params.orderId) ||
+        holdRecord.courtId !== params.courtId ||
+        holdRecord.date !== params.date ||
+        holdRecord.slotIds.length !== params.slotIds.length ||
+        !holdRecord.slotIds.every((slotId) => params.slotIds.includes(slotId))
+      ) {
+        return { success: false, error: "This checkout hold is no longer valid. Please select the slots again." };
+      }
       const bookingRef = `TRF-${Math.floor(100000 + Math.random() * 900000)}`;
 
       const confirmedBooking: BookingRecord = {
@@ -507,9 +530,9 @@ export function confirmBooking(params: {
         teamName: params.teamName,
         sportType: params.sportType,
         status: "CONFIRMED",
-        paymentMethod: "UPI",
-        paymentStatus: "PAID",
-        paymentId: params.paymentId || `pay_upi_${Date.now()}`,
+        paymentMethod: params.paymentMethod || "UPI",
+        paymentStatus: params.paymentStatus || "PAID",
+        paymentId: params.paymentId,
         orderId: params.orderId,
         heldUntil: undefined,
       };
@@ -559,9 +582,9 @@ export function confirmBooking(params: {
     teamName: params.teamName,
     sportType: params.sportType,
     status: "CONFIRMED",
-    paymentMethod: "UPI",
-    paymentStatus: "PAID",
-    paymentId: params.paymentId || `pay_upi_${Date.now()}`,
+    paymentMethod: params.paymentMethod || "UPI",
+    paymentStatus: params.paymentStatus || "PAID",
+    paymentId: params.paymentId,
     orderId: params.orderId,
     createdAt: Date.now(),
   };

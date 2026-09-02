@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { confirmBooking, CourtId } from "@/lib/bookingStore";
 
+export const runtime = "nodejs";
+
+function isCourtId(value: unknown): value is CourtId {
+  return value === "C1" || value === "C2" || value === "F";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -20,36 +26,34 @@ export async function POST(request: NextRequest) {
       sportType,
     } = body;
 
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || "placeholder_secret_key";
+    if (!isCourtId(courtId) || typeof date !== "string" || !Array.isArray(slotIds) || !slotIds.length || !holdToken || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json({ success: false, error: "Missing or invalid payment verification details." }, { status: 400 });
+    }
 
-    // If real keys are in use, cryptographically verify HMAC-SHA256 signature
-    if (
-      keySecret &&
-      !keySecret.includes("placeholder") &&
-      razorpay_signature &&
-      razorpay_order_id &&
-      razorpay_payment_id
-    ) {
-      const generatedSignature = crypto
-        .createHmac("sha256", keySecret)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-        .digest("hex");
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return NextResponse.json({ success: false, error: "Razorpay is not configured." }, { status: 503 });
+    }
 
-      if (generatedSignature !== razorpay_signature) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Payment verification failed. Invalid digital signature.",
-          },
-          { status: 400 }
-        );
-      }
+    const generatedSignature = crypto
+      .createHmac("sha256", keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    const signaturesMatch =
+      generatedSignature.length === razorpay_signature.length &&
+      crypto.timingSafeEqual(Buffer.from(generatedSignature), Buffer.from(razorpay_signature));
+    if (!signaturesMatch) {
+      return NextResponse.json(
+        { success: false, error: "Payment verification failed. Invalid digital signature." },
+        { status: 400 }
+      );
     }
 
     // Atomically confirm booking with payment ID
     const confirmResult = confirmBooking({
       holdToken,
-      courtId: courtId as CourtId,
+      courtId,
       date,
       slotIds,
       customerName,
@@ -59,6 +63,8 @@ export async function POST(request: NextRequest) {
       sportType,
       paymentId: razorpay_payment_id || `pay_upi_${Date.now()}`,
       orderId: razorpay_order_id,
+      paymentMethod: "UPI",
+      paymentStatus: "PAID",
     });
 
     if (!confirmResult.success) {
