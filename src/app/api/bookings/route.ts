@@ -61,19 +61,11 @@ export async function POST(request: NextRequest) {
         customerEmail,
         teamName,
         sportType,
-        paymentMethod,
       } = body;
 
       if (!courtId || !date || !slotIds || slotIds.length === 0 || !customerName || !customerPhone) {
         return NextResponse.json(
           { success: false, error: "Please fill in all player contact details." },
-          { status: 400 }
-        );
-      }
-
-      if (paymentMethod !== "VENUE") {
-        return NextResponse.json(
-          { success: false, error: "Online payments must be confirmed through Razorpay verification." },
           { status: 400 }
         );
       }
@@ -88,8 +80,8 @@ export async function POST(request: NextRequest) {
         customerEmail,
         teamName,
         sportType,
-        paymentMethod: paymentMethod === "VENUE" ? "VENUE" : "UPI",
-        paymentStatus: paymentMethod === "VENUE" ? "PENDING" : "PAID",
+        paymentMethod: "UPI",
+        paymentStatus: "PAID",
       });
 
       if (!result.success) {
