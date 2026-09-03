@@ -84,7 +84,7 @@ export interface BookingRecord {
   teamName?: string;
   sportType?: string;
   status: "CONFIRMED" | "HELD" | "CANCELLED";
-  paymentMethod: "UPI" | "VENUE";
+  paymentMethod: "UPI";
   paymentStatus: "PAID" | "PENDING";
   paymentId?: string;
   orderId?: string;
@@ -494,7 +494,7 @@ export function confirmBooking(params: {
   customerEmail: string;
   teamName?: string;
   sportType?: string;
-  paymentMethod?: "UPI" | "VENUE";
+  paymentMethod?: "UPI";
   paymentStatus?: "PAID" | "PENDING";
   paymentId?: string;
   orderId?: string;
