@@ -55,7 +55,7 @@ export default function TimeSlotGrid({
         </div>
         <div className="legend-item">
           <span className="legend-box expired-box"></span>
-          <span>Passed (Today)</span>
+          <span>Passed</span>
         </div>
       </div>
 
@@ -126,7 +126,7 @@ export default function TimeSlotGrid({
                           ) : isUnavailable ? (
                             <span className="status-label unavail-txt">CONFLICT</span>
                           ) : isExpired ? (
-                            <span className="status-label expired-txt">EXPIRED</span>
+                            <span className="status-label expired-txt">CLOSED</span>
                           ) : (
                             <span className="status-label avail-txt">₹{slot.price}</span>
                           )}

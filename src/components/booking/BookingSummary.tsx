@@ -34,10 +34,14 @@ export default function BookingSummary({
   const totalPrice = basePrice + additionalCharges;
 
   // Sort slots by start hour for clean time display
-  const sortedSlots = [...selectedSlots].sort((a, b) => a.startHour - b.startHour);
+  const sortedSlots = [...selectedSlots].sort(
+    (a, b) => a.startHour - b.startHour,
+  );
   const startTime = sortedSlots[0]?.startTime || "—";
   const endTime = sortedSlots[sortedSlots.length - 1]?.endTime || "—";
-  const timeRangeDisplay = hasSelected ? `${startTime} – ${endTime}` : "No slot selected";
+  const timeRangeDisplay = hasSelected
+    ? `${startTime} – ${endTime}`
+    : "No slot selected";
 
   return (
     <div className="booking-summary-card">
@@ -54,13 +58,21 @@ export default function BookingSummary({
       <div className="summary-turf-preview">
         <div className="preview-img-container">
           <img src="/images/turf-top-view.jpg" alt="Turf preview" />
+
           <div className="preview-zone-tag">
             {selectedCourt === "F" ? "FULL GROUND" : selectedCourt}
           </div>
         </div>
+
         <div className="preview-details">
-          <h4>OnePitch Arena — {court.name}</h4>
-          <span className="preview-loc">Abiramapuram, Perambalur • {court.capacity}</span>
+          <h4>
+            OnePitch —{" "}
+            <span className="court-name-highlight">{court.name}</span>
+          </h4>
+
+          <span className="preview-loc">
+            Abiramapuram, Perambalur • {court.capacity}
+          </span>
         </div>
       </div>
 
@@ -85,7 +97,9 @@ export default function BookingSummary({
         <div className="summary-row">
           <span className="row-label">Total Duration</span>
           <span className="row-val">
-            {hasSelected ? `${durationHours} ${durationHours === 1 ? "Hour" : "Hours"}` : "—"}
+            {hasSelected
+              ? `${durationHours} ${durationHours === 1 ? "Hour" : "Hours"}`
+              : "—"}
           </span>
         </div>
 
@@ -93,7 +107,9 @@ export default function BookingSummary({
 
         <div className="summary-row">
           <span className="row-label">Hourly Rate</span>
-          <span className="row-val">₹{court.pricePerHour.toLocaleString()} / hr</span>
+          <span className="row-val">
+            ₹{court.pricePerHour.toLocaleString()} / hr
+          </span>
         </div>
 
         <div className="summary-row">
@@ -109,7 +125,9 @@ export default function BookingSummary({
         <div className="summary-total-row">
           <div className="total-label-box">
             <span className="total-title">Total Payable</span>
-            <span className="total-sub">Inc. all amenities &amp; floodlights</span>
+            <span className="total-sub">
+              Inc. all amenities &amp; floodlights
+            </span>
           </div>
           <div className="total-amount-box">
             <span className="total-amount">₹{totalPrice.toLocaleString()}</span>
@@ -124,7 +142,9 @@ export default function BookingSummary({
           disabled={!hasSelected}
           onClick={onProceedToReview}
         >
-          {hasSelected ? "Continue to Booking Review →" : "Select an Available Slot Above to Continue"}
+          {hasSelected
+            ? "Continue to Booking Review →"
+            : "Select an Available Slot Above to Continue"}
         </button>
 
         <p className="summary-guarantee-note">

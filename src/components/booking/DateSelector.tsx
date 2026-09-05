@@ -89,7 +89,7 @@ export default function DateSelector({
               }`}
               onClick={() => onSelectDate(item.iso)}
             >
-              {item.isToday && <span className="today-badge">TODAY</span>}
+              {item.isToday && <span className="today-badge">Today</span>}
               <span className="date-weekday">{item.dayName}</span>
               <span className="date-number">{item.dayNum}</span>
               <span className="date-month">{item.monthName}</span>

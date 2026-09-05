@@ -37,7 +37,12 @@ export default function Header() {
     <header id="header" className={isSolid ? "solid" : ""}>
       <nav className="wrap">
         <Link href="/" className="logo" onClick={closeMenu}>
-          <span className="dot"></span>OnePitch
+          <img
+            src="/images/onepitchturf_logo.jpg"
+            alt="OnePitch logo"
+            className="logo-image"
+          />
+          <span>OnePitch</span>
         </Link>
         <ul className={`nav-links ${isMenuOpen ? "open" : ""}`} id="navLinks">
           {navItems.map((item) => {

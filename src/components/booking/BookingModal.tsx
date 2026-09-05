@@ -45,7 +45,7 @@ export default function BookingModal({
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [teamName, setTeamName] = useState("");
-  const [sportType, setSportType] = useState<string>("Football");
+  const [sportType, setSportType] = useState<string>("Cricket");
   const [paymentMethod, setPaymentMethod] = useState<string>("UPI");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -137,7 +137,8 @@ export default function BookingModal({
           key: orderData.keyId,
           amount: orderData.amountInPaise,
           currency: orderData.currency,
-          name: "OnePitch Arena",
+          name: "OnePitch Turf",
+          image: `${window.location.origin}/images/onepitchturf_logo.jpg`,
           description: `${court.name} booking on ${selectedDate}`,
           order_id: orderData.orderId,
           prefill: {
@@ -145,36 +146,46 @@ export default function BookingModal({
             contact: bookingPayload.customerPhone,
             email: bookingPayload.customerEmail,
           },
-          theme: { color: "#ffb13c" },
+          theme: { color: "#0d0903" },
           modal: {
             ondismiss: () => {
               setIsSubmitting(false);
-              setErrorMessage("Payment was cancelled. Your slots remain held for a short time.");
+              setErrorMessage(
+                "Payment was cancelled. Your slots remain held for a short time.",
+              );
             },
           },
           handler: async (payment: Record<string, string>) => {
             try {
-              const verifyResponse = await fetch("/api/razorpay/verify-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  ...bookingPayload,
-                  holdToken: orderData.holdToken,
-                  razorpay_order_id: payment.razorpay_order_id,
-                  razorpay_payment_id: payment.razorpay_payment_id,
-                  razorpay_signature: payment.razorpay_signature,
-                }),
-              });
+              const verifyResponse = await fetch(
+                "/api/razorpay/verify-payment",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    ...bookingPayload,
+                    holdToken: orderData.holdToken,
+                    razorpay_order_id: payment.razorpay_order_id,
+                    razorpay_payment_id: payment.razorpay_payment_id,
+                    razorpay_signature: payment.razorpay_signature,
+                  }),
+                },
+              );
               const verifyData = await verifyResponse.json();
               if (!verifyResponse.ok || !verifyData.success) {
-                setErrorMessage(verifyData.error || "Payment could not be verified. Please contact us with your payment ID.");
+                setErrorMessage(
+                  verifyData.error ||
+                    "Payment could not be verified. Please contact us with your payment ID.",
+                );
                 setIsSubmitting(false);
                 return;
               }
               onBookingSuccess(verifyData.booking);
             } catch (error) {
               console.error(error);
-              setErrorMessage("Payment completed, but verification could not be reached. Please contact us before trying again.");
+              setErrorMessage(
+                "Payment completed, but verification could not be reached. Please contact us before trying again.",
+              );
               setIsSubmitting(false);
             }
           },
@@ -221,7 +232,12 @@ export default function BookingModal({
             <span className="eyebrow">Checkout &amp; Verification</span>
             <h2 className="modal-title">Review &amp; Confirm Booking</h2>
           </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close modal">
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
             ✕
           </button>
         </div>
@@ -247,7 +263,9 @@ export default function BookingModal({
           <div className="modal-match-summary">
             <div className="match-summary-item">
               <span className="label">Court</span>
-              <span className="value highlight-text">{court.name} ({court.subtitle})</span>
+              <span className="value highlight-text">
+                {court.name} ({court.subtitle})
+              </span>
             </div>
             <div className="match-summary-item">
               <span className="label">Date</span>
@@ -255,11 +273,15 @@ export default function BookingModal({
             </div>
             <div className="match-summary-item">
               <span className="label">Time</span>
-              <span className="value">{startTime} – {endTime} ({duration} hr)</span>
+              <span className="value">
+                {startTime} – {endTime} ({duration} hr)
+              </span>
             </div>
             <div className="match-summary-item">
               <span className="label">Total Amount</span>
-              <span className="value price-tag">₹{totalPrice.toLocaleString()}</span>
+              <span className="value price-tag">
+                ₹{totalPrice.toLocaleString()}
+              </span>
             </div>
           </div>
 
@@ -281,7 +303,9 @@ export default function BookingModal({
               </div>
 
               <div className="form-group">
-                <label htmlFor="customerPhone">Mobile Number (WhatsApp) *</label>
+                <label htmlFor="customerPhone">
+                  Mobile Number (WhatsApp) *
+                </label>
                 <input
                   id="customerPhone"
                   type="tel"
@@ -323,11 +347,15 @@ export default function BookingModal({
           <div className="form-section">
             <h4 className="form-section-title">⚽ Sport Type</h4>
             <div className="sport-options-row">
-              {["Football 5v5/6v6", "Box Cricket", "Full 8v8 Tournament"].map((s) => (
-                <label key={s} className={`sport-pill ${sportType === s ? "sport-active" : ""}`}>
+              {[ "Cricket", "Football" ].map((s) => (
+                <label
+                  key={s}
+                  className={`sport-pill ${sportType === s ? "sport-active" : ""}`}
+                >
                   <input
                     type="radio"
                     name="sportType"
+                    
                     value={s}
                     checked={sportType === s}
                     onChange={(e) => setSportType(e.target.value)}
@@ -342,7 +370,9 @@ export default function BookingModal({
           <div className="form-section">
             <h4 className="form-section-title">💳 Payment Mode</h4>
             <div className="payment-methods-grid">
-              <label className={`payment-card ${paymentMethod === "UPI" ? "pay-active" : ""}`}>
+              <label
+                className={`payment-card ${paymentMethod === "UPI" ? "pay-active" : ""}`}
+              >
                 <input
                   type="radio"
                   name="paymentMethod"
@@ -358,35 +388,28 @@ export default function BookingModal({
                   </div>
                 </div>
               </label>
-
-              <label className={`payment-card ${paymentMethod === "VENUE" ? "pay-active" : ""}`}>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="VENUE"
-                  checked={paymentMethod === "VENUE"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                />
-                <div className="pay-card-content">
-                  <span className="pay-icon">🏟️</span>
-                  <div>
-                    <strong>Pay at Venue</strong>
-                    <p>Cash / UPI upon arrival</p>
-                  </div>
-                </div>
-              </label>
             </div>
           </div>
 
           {/* Modal Footer Actions */}
           <div className="modal-footer">
-            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isSubmitting}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary confirm-btn" disabled={isSubmitting}>
+            <button
+              type="submit"
+              className="btn btn-primary confirm-btn"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? (
                 <span className="btn-loading">
-                  <span className="loading-spinner small"></span> Verifying &amp; Booking...
+                  <span className="loading-spinner small"></span> Verifying
+                  &amp; Booking...
                 </span>
               ) : (
                 `Confirm & Book (₹${totalPrice.toLocaleString()}) →`
