@@ -23,9 +23,7 @@ export default function CourtSelector({
           <span className="eyebrow">Step 1</span>
           <h2 className="step-title">Choose Court / Turf Area</h2>
         </div>
-        <p className="step-desc">
-          Select individual court halves (C1/C2) or the entire full ground (F).
-        </p>
+        <p className="step-desc">Pick your court. Let’s get playing.</p>
       </div>
 
       <div className="court-cards-grid">
@@ -50,7 +48,9 @@ export default function CourtSelector({
                 </div>
                 <div className="court-price-box">
                   <span className="currency">₹</span>
-                  <span className="amount">{court.pricePerHour.toLocaleString()}</span>
+                  <span className="amount">
+                    {court.pricePerHour.toLocaleString()}
+                  </span>
                   <span className="unit">/ hour</span>
                 </div>
               </div>
@@ -69,7 +69,14 @@ export default function CourtSelector({
                 <div className="select-action-indicator">
                   {isSelected ? (
                     <span className="selected-indicator">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       SELECTED

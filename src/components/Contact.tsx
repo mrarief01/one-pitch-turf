@@ -9,7 +9,10 @@ export default function Contact() {
             <p>Open daily. Walk-ins welcome when slots are free.</p>
             <div className="cline">
               <span className="label">Address</span>
-              <span>Collector Office Road, Abiramapuram, Perambalur, Tamil Nadu 621212</span>
+              <span>
+                OnePitch Turf, Collector Office Road, Abiramapuram, Perambalur, Tamil Nadu
+                621212
+              </span>
             </div>
             <div className="cline">
               <span className="label">Phone</span>
@@ -61,9 +64,19 @@ export default function Contact() {
           <div className="contact-map">
             <iframe
               loading="lazy"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3913.4216753362416!2d78.87446477768495!3d11.230359135302102!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bab1b004fb11083%3A0x7b520478fdb77e5d!2sOnePitch%20Turf!5e0!3m2!1sen!2sin!4v1788360416781!5m2!1sen!2sin"
+              // width="600"
+              // height="450"
+              // style="border:0;"
+              // allowfullscreen=""
+              title="OnePitch location map"
+              // referrerpolicy="strict-origin-when-cross-origin"
+            ></iframe>
+            {/* <iframe
+              loading="lazy"
               src="https://maps.google.com/maps?q=Collector%20Office%20Road%2C%20Abiramapuram%2C%20Perambalur%2C%20Tamil%20Nadu%20621212&t=&z=15&ie=UTF8&iwloc=&output=embed"
               title="OnePitch location map"
-            ></iframe>
+            ></iframe> */}
           </div>
         </div>
       </div>

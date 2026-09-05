@@ -22,14 +22,31 @@ export default function BookingSuccess({ booking, onBookAnother }: BookingSucces
   });
 
   const whatsappMessage = encodeURIComponent(
-    `🏏 *OnePitch Turf Booking Confirmed!* ⚽\n` +
-      `📌 *Booking ID:* ${booking.bookingRef}\n` +
-      `🏟️ *Court:* ${court.name} (${court.subtitle})\n` +
-      `📅 *Date:* ${formattedDate}\n` +
-      `⏰ *Time:* ${booking.startTime} - ${booking.endTime} (${booking.durationHours} hrs)\n` +
-      `💰 *Amount:* ₹${booking.priceTotal}\n` +
-      `👤 *Player:* ${booking.customerName}\n` +
-      `📍 *Location:* Collector Office Road, Perambalur`
+    `🏏 *ONEPITCH TURF — BOOKING CONFIRMED*\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `Hello ${booking.customerName},\n\n` +
+      `Your turf booking has been successfully confirmed. Here are your booking details:\n\n` +
+      `📌 *BOOKING DETAILS*\n` +
+      `Booking ID: *${booking.bookingRef}*\n` +
+      `Turf: *OnePitch Turf, Perambalur*\n` +
+      `Court: *${court.name} — ${court.subtitle}*\n` +
+      `Sport: *${booking.sportType || "Cricket"}*\n` +
+      `Date: *${formattedDate}*\n` +
+      `Time: *${booking.startTime} – ${booking.endTime}*\n` +
+      `Duration: *${booking.durationHours} ${booking.durationHours === 1 ? "Hour" : "Hours"}*\n` +
+      (booking.teamName ? `Team / Club: *${booking.teamName}*\n` : "") +
+      `\n💳 *PAYMENT DETAILS*\n` +
+      `Amount Paid: *₹${booking.priceTotal.toLocaleString()}*\n` +
+      `Payment Method: *${booking.paymentMethod || "UPI"}*\n` +
+      `Payment ID: *${booking.paymentId || "N/A"}*\n` +
+      `\n📍 *VENUE*\n` +
+      `OnePitch Turf\n` +
+      `Collector Office Road, Perambalur\n\n` +
+      `⏰ *Please arrive 10 minutes before your scheduled time.*\n` +
+      `👟 Turf shoes / rubber studs are recommended.\n` +
+      `🚫 Metal studs are strictly prohibited.\n\n` +
+      `Thank you for choosing *OnePitch Turf*! 🏏\n` +
+      `Have a great game! ⚡`,
   );
 
   const handlePrint = () => {

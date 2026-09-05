@@ -33,9 +33,9 @@ export default function TurfVisualizer({
           {isFull ? (
             <span className="badge-full">⚡ FULL TURF SELECTED (C1 + C2)</span>
           ) : isC1 ? (
-            <span className="badge-c1">📍 COURT 1 (LEFT HALF)</span>
+            <span className="badge-c1"> COURT 1 (LEFT HALF)</span>
           ) : (
-            <span className="badge-c2">📍 COURT 2 (RIGHT HALF)</span>
+            <span className="badge-c2"> COURT 2 (RIGHT HALF)</span>
           )}
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function TurfVisualizer({
                   <span className="chip-code">C1</span>
                   <span className="chip-name">Court 1</span>
                 </div>
-                <p className="zone-spec">Left Half • 5v5 / Cricket</p>
+                <p className="zone-spec">Left Half</p>
                 <div className="zone-price-tag">₹800/hr</div>
               </div>
 
@@ -102,7 +102,7 @@ export default function TurfVisualizer({
                   <span className="chip-code">C2</span>
                   <span className="chip-name">Court 2</span>
                 </div>
-                <p className="zone-spec">Right Half • 5v5 / Cricket</p>
+                <p className="zone-spec">Right Half</p>
                 <div className="zone-price-tag">₹800/hr</div>
               </div>
 
@@ -120,7 +120,7 @@ export default function TurfVisualizer({
               <div className="full-banner-content">
                 <div className="full-turf-icon">🏆</div>
                 <div>
-                  <h4>FULL TURF — ENTIRE 12,000 SQ FT PITCH</h4>
+                  <h4>FULL TURF — ENTIRE PITCH</h4>
                   <p>Includes Court 1 + Court 2 simultaneously for 8v8 / 11v11 / Tournaments</p>
                 </div>
                 <div className="full-banner-price">₹1,500 / hr</div>
@@ -138,7 +138,7 @@ export default function TurfVisualizer({
         </div>
         <div className="spec-indicator">
           <span className="spec-dot amber"></span>
-          <span>High-Mast LED Floodlighting 24/7</span>
+          <span>High-Mast LED Floodlighting</span>
         </div>
         <div className="quick-toggle-group">
           <span className="toggle-label">Direct Pitch Switch:</span>

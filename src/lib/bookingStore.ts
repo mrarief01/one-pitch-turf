@@ -15,28 +15,29 @@ export const COURTS: Record<CourtId, CourtInfo> = {
     id: "C1",
     name: "Court 1",
     subtitle: "Left Half",
-    description: "Ideal for 5v5 / 6v6 Football & Box Cricket with dedicated goal and batting pitch.",
+    description: "Perfect for 5v5 or 6v6. Pick your Sports football or cricket.",
     pricePerHour: 800,
     capacity: "5v5 / 6v6 (10-12 Players)",
-    sportTypes: ["Football 5v5", "Box Cricket"],
+    sportTypes: ["Football", "Cricket"],
   },
   C2: {
     id: "C2",
     name: "Court 2",
     subtitle: "Right Half",
-    description: "Ideal for 5v5 / 6v6 Football & Box Cricket with turf wickets and floodlit goals.",
+    description: "5v5 or 6v6, floodlit and ready. Bring the whole squad.",
     pricePerHour: 800,
     capacity: "5v5 / 6v6 (10-12 Players)",
-    sportTypes: ["Football 5v5", "Box Cricket"],
+    sportTypes: ["Football", "Cricket"],
   },
   F: {
     id: "F",
     name: "Full Turf",
     subtitle: "Entire Turf (C1 + C2)",
-    description: "12,000 sq ft tournament-grade FIFA Quality Pro ground for 8v8 / 11v11 matches.",
+    description:
+      "Go big with 8v8 or 11v11. Take over the full turf.",
     pricePerHour: 1500,
     capacity: "8v8 / 11v11 (16-22 Players)",
-    sportTypes: ["Football 8v8/11v11", "Tournament Cricket", "Full League Match"],
+    sportTypes: ["Football", "Cricket"],
   },
 };
 
@@ -320,7 +321,7 @@ export function calculateAvailability(
           status: "UNAVAILABLE",
           price,
           bookedCourt: "F",
-          conflictReason: `Unavailable because Full Turf is booked (${fBooking.teamName || "Occupied"}).`,
+          conflictReason: `Full Turf is booked (${fBooking.teamName || "Occupied"}).`,
         };
       }
     }
@@ -385,7 +386,7 @@ export function calculateAvailability(
           status: "UNAVAILABLE",
           price,
           bookedCourt: "C1",
-          conflictReason: `Full turf unavailable because Court 1 (Left Half) is booked by ${c1Booking.teamName || c1Booking.customerName}.`,
+          conflictReason: `Court 1 is booked by ${c1Booking.teamName || c1Booking.customerName}.`,
         };
       }
       if (c2Booking) {
@@ -394,7 +395,7 @@ export function calculateAvailability(
           status: "UNAVAILABLE",
           price,
           bookedCourt: "C2",
-          conflictReason: `Full turf unavailable because Court 2 (Right Half) is booked by ${c2Booking.teamName || c2Booking.customerName}.`,
+          conflictReason: `Court 2 is booked by ${c2Booking.teamName || c2Booking.customerName}.`,
         };
       }
       return {
