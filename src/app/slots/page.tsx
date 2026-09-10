@@ -109,7 +109,7 @@ export default function BookingPage() {
   const handleAvailabilityConflict = (msg: string) => {
     setConflictAlert(msg);
     fetchAvailability();
-    setTimeout(() => setConflictAlert(null), 6000);
+    setTimeout(() => setConflictAlert(null), 5000);
   };
 
   const selectedSlotObjects = slots.filter((s) => selectedSlotIds.includes(s.id));
@@ -140,7 +140,7 @@ export default function BookingPage() {
           </div>
 
           {conflictAlert && (
-            <div className="global-conflict-toast reveal">
+            <div className="global-conflict-toast" role="alert" aria-live="assertive">
               <div className="toast-icon">⚠️</div>
               <div className="toast-body">
                 <strong>Availability Notice:</strong> {conflictAlert}

@@ -57,6 +57,13 @@ export default function BookingModal({
     if (!isOpen) {
       setTimeLeft(300);
       setErrorMessage(null);
+      // The modal component stays mounted after closing. Clear personal data
+      // so a later customer on the same device is never prefilled with it.
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerEmail("");
+      setTeamName("");
+      setSportType("Cricket");
       return;
     }
 
@@ -74,6 +81,13 @@ export default function BookingModal({
 
     return () => clearInterval(interval);
   }, [isOpen, onClose, onAvailabilityConflict]);
+
+  // Payment and validation failures are transient notifications.
+  useEffect(() => {
+    if (!errorMessage) return;
+    const timeout = window.setTimeout(() => setErrorMessage(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [errorMessage]);
 
   if (!isOpen) return null;
 
@@ -132,7 +146,9 @@ export default function BookingModal({
 
         await loadRazorpayCheckout();
         if (!window.Razorpay) throw new Error("Razorpay checkout is unavailable.");
+        const cleanPhone = bookingPayload.customerPhone.replace(/\D/g, "");
 
+        const razorpayPhone = cleanPhone.startsWith("91")? `+${cleanPhone}`: `+91${cleanPhone}`;
         const razorpay = new window.Razorpay({
           key: orderData.keyId,
           amount: orderData.amountInPaise,
@@ -142,9 +158,11 @@ export default function BookingModal({
           description: `${court.name} booking on ${selectedDate}`,
           order_id: orderData.orderId,
           prefill: {
-            name: bookingPayload.customerName,
-            contact: bookingPayload.customerPhone,
-            email: bookingPayload.customerEmail,
+            name: bookingPayload.customerName.trim(),
+            contact: razorpayPhone,
+            ...(bookingPayload.customerEmail?.trim()
+              ? { email: bookingPayload.customerEmail.trim() }
+              : {}),
           },
           theme: { color: "#0d0903" },
           modal: {

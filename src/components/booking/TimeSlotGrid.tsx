@@ -8,6 +8,7 @@ interface TimeSlotGridProps {
   selectedSlotIds: string[];
   onToggleSlot: (slotId: string) => void;
   isLoading?: boolean;
+  warning?: string | null;
 }
 
 export default function TimeSlotGrid({
@@ -15,6 +16,7 @@ export default function TimeSlotGrid({
   selectedSlotIds,
   onToggleSlot,
   isLoading = false,
+  warning = null,
 }: TimeSlotGridProps) {
   const periods: Array<{ id: SlotPeriod; title: string; subtitle: string; icon: string }> = [
     { id: "morning", title: "Morning Slots", subtitle: "05:00 AM – 11:00 AM", icon: "🌅" },
@@ -34,6 +36,8 @@ export default function TimeSlotGrid({
           Click to select one or multiple consecutive hours. Real-time availability updates instantly.
         </p>
       </div>
+
+      {warning && <div className="modal-error-banner">⚠️ {warning}</div>}
 
       {/* Visual Status Legend */}
       <div className="slot-legend-bar">

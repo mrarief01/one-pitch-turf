@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import {
-  calculateAvailability,
-  holdSlots,
-  attachOrderToHold,
   CourtId,
   COURTS,
 } from "@/lib/bookingStore";
+import { attachOrderToBooking, getAvailability, holdBooking } from "@/lib/bookingService";
 
 export const runtime = "nodejs";
 
@@ -50,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Verify real-time availability before creating order
-    const availability = calculateAvailability(courtId, date);
+    const availability = await getAvailability(courtId, date);
     for (const slotId of slotIds) {
       const slot = availability.find((s) => s.id === slotId);
       if (!slot || slot.status !== "AVAILABLE") {
@@ -71,7 +69,7 @@ export async function POST(request: NextRequest) {
     const amountInPaise = amountInRupees * 100;
 
     // 3. Place temporary hold on slots during checkout
-    const holdResult = holdSlots({
+    const holdResult = await holdBooking({
       courtId,
       date,
       slotIds,
@@ -101,7 +99,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!holdResult.holdToken || !attachOrderToHold(holdResult.holdToken, order.id)) {
+    if (!holdResult.holdToken || !(await attachOrderToBooking(holdResult.holdToken, order.id))) {
       return NextResponse.json(
         { success: false, error: "Your checkout hold expired. Please select the slots again." },
         { status: 409 }
@@ -119,7 +117,10 @@ export async function POST(request: NextRequest) {
       customer: {
         name: customerName,
         phone: customerPhone,
-        email: customerEmail || "onepitchturf@gmail.com",
+        // Do not invent or reuse an email address for Razorpay.
+        ...(typeof customerEmail === "string" && customerEmail.trim()
+          ? { email: customerEmail.trim() }
+          : {}),
       },
     });
   } catch (error) {

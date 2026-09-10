@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { confirmBooking, CourtId } from "@/lib/bookingStore";
+import { CourtId } from "@/lib/bookingStore";
+import { confirmHeldBooking } from "@/lib/bookingService";
 
 export const runtime = "nodejs";
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Atomically confirm booking with payment ID
-    const confirmResult = confirmBooking({
+    const confirmResult = await confirmHeldBooking({
       holdToken,
       courtId,
       date,
@@ -63,7 +64,6 @@ export async function POST(request: NextRequest) {
       sportType,
       paymentId: razorpay_payment_id || `pay_upi_${Date.now()}`,
       orderId: razorpay_order_id,
-      paymentMethod: "UPI",
       paymentStatus: "PAID",
     });
 

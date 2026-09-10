@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  confirmBooking,
-  holdSlots,
-  getAllBookings,
-  resetBookings,
   CourtId,
 } from "@/lib/bookingStore";
+import { confirmHeldBooking, holdBooking } from "@/lib/bookingService";
 
 export async function GET() {
-  try {
-    const bookings = getAllBookings();
-    return NextResponse.json({ success: true, bookings });
-  } catch (error) {
-    console.error("Get bookings error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to retrieve bookings." },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ success: false, error: "Booking records are private and are not exposed by this endpoint." }, { status: 403 });
 }
 
 export async function POST(request: NextRequest) {
@@ -34,7 +22,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const result = holdSlots({
+      const result = await holdBooking({
         courtId: courtId as CourtId,
         date,
         slotIds,
@@ -70,8 +58,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const result = confirmBooking({
-        holdToken,
+      const input = {
         courtId: courtId as CourtId,
         date,
         slotIds,
@@ -80,20 +67,16 @@ export async function POST(request: NextRequest) {
         customerEmail,
         teamName,
         sportType,
-        paymentMethod: "UPI",
-        paymentStatus: "PAID",
-      });
+      };
+      const held = holdToken ? { success: true as const, holdToken } : await holdBooking(input);
+      if (!held.success) return NextResponse.json({ success: false, error: held.error }, { status: 409 });
+      const result = await confirmHeldBooking({ ...input, holdToken: held.holdToken, paymentStatus: "PAID" });
 
       if (!result.success) {
         return NextResponse.json({ success: false, error: result.error }, { status: 409 });
       }
 
       return NextResponse.json({ success: true, booking: result.booking });
-    }
-
-    if (action === "reset") {
-      resetBookings();
-      return NextResponse.json({ success: true, message: "Bookings reset to seed state." });
     }
 
     return NextResponse.json(

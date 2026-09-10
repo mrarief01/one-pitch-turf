@@ -61,9 +61,6 @@ export default function Header() {
           })}
         </ul>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <Link href="/slots" className="btn btn-primary" onClick={closeMenu}>
-            Book a Slot
-          </Link>
           <button
             className="burger"
             id="burger"
