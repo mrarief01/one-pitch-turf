@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  CourtId,
-} from "@/lib/bookingStore";
+import { CourtId } from "@/lib/bookingStore";
 import { confirmHeldBooking, holdBooking } from "@/lib/bookingService";
+import { sendDualWhatsAppNotifications } from "@/lib/whatsappService";
 
 export async function GET() {
   return NextResponse.json({ success: false, error: "Booking records are private and are not exposed by this endpoint." }, { status: 403 });
@@ -76,7 +75,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: result.error }, { status: 409 });
       }
 
-      return NextResponse.json({ success: true, booking: result.booking });
+      // Trigger Dual WhatsApp Engine
+      const notifications = await sendDualWhatsAppNotifications(result.booking);
+
+      return NextResponse.json({ success: true, booking: result.booking, notifications });
     }
 
     return NextResponse.json(

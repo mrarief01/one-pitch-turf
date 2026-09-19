@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { CourtId, COURTS, CalculatedSlot, BookingRecord } from "@/lib/bookingStore";
+import { validatePhoneNumber } from "@/lib/phoneValidation";
 
 declare global {
   interface Window {
@@ -57,30 +58,33 @@ export default function BookingModal({
     if (!isOpen) {
       setTimeLeft(300);
       setErrorMessage(null);
-      // The modal component stays mounted after closing. Clear personal data
-      // so a later customer on the same device is never prefilled with it.
+
+      // Clear personal data when modal closes
       setCustomerName("");
       setCustomerPhone("");
       setCustomerEmail("");
       setTeamName("");
       setSportType("Cricket");
+
       return;
     }
 
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onClose();
-          onAvailabilityConflict("Your 5-minute temporary hold expired. Please reselect your slot.");
-          return 0;
-        }
-        return prev - 1;
-      });
+    const interval = window.setInterval(() => {
+      setTimeLeft((prev) => Math.max(prev - 1, 0));
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [isOpen, onClose, onAvailabilityConflict]);
+    return () => window.clearInterval(interval);
+  }, [isOpen]);
+
+  // Handle hold expiration OUTSIDE the state updater
+  useEffect(() => {
+    if (!isOpen || timeLeft !== 0) return;
+
+    onClose();
+    onAvailabilityConflict(
+      "Your 5-minute temporary hold expired. Please reselect your slot.",
+    );
+  }, [isOpen, timeLeft, onClose, onAvailabilityConflict]);
 
   // Payment and validation failures are transient notifications.
   useEffect(() => {
@@ -92,7 +96,9 @@ export default function BookingModal({
   if (!isOpen) return null;
 
   const court = COURTS[selectedCourt];
-  const sortedSlots = [...selectedSlots].sort((a, b) => a.startHour - b.startHour);
+  const sortedSlots = [...selectedSlots].sort(
+    (a, b) => a.startHour - b.startHour,
+  );
   const startTime = sortedSlots[0]?.startTime || "";
   const endTime = sortedSlots[sortedSlots.length - 1]?.endTime || "";
   const duration = sortedSlots.length;
@@ -112,8 +118,11 @@ export default function BookingModal({
       setErrorMessage("Please enter your full name.");
       return;
     }
-    if (!customerPhone.trim() || customerPhone.replace(/\D/g, "").length < 10) {
-      setErrorMessage("Please enter a valid 10-digit mobile number.");
+    const phoneValidation = validatePhoneNumber(customerPhone);
+    if (!phoneValidation.isValid) {
+      setErrorMessage(
+        phoneValidation.error || "Please enter a valid mobile number.",
+      );
       return;
     }
 
@@ -139,16 +148,21 @@ export default function BookingModal({
         });
         const orderData = await orderResponse.json();
         if (!orderResponse.ok || !orderData.success) {
-          setErrorMessage(orderData.error || "Unable to start Razorpay payment.");
+          setErrorMessage(
+            orderData.error || "Unable to start Razorpay payment.",
+          );
           setIsSubmitting(false);
           return;
         }
 
         await loadRazorpayCheckout();
-        if (!window.Razorpay) throw new Error("Razorpay checkout is unavailable.");
+        if (!window.Razorpay)
+          throw new Error("Razorpay checkout is unavailable.");
         const cleanPhone = bookingPayload.customerPhone.replace(/\D/g, "");
 
-        const razorpayPhone = cleanPhone.startsWith("91")? `+${cleanPhone}`: `+91${cleanPhone}`;
+        const razorpayPhone = cleanPhone.startsWith("91")
+          ? `+${cleanPhone}`
+          : `+91${cleanPhone}`;
         const razorpay = new window.Razorpay({
           key: orderData.keyId,
           amount: orderData.amountInPaise,
@@ -225,7 +239,9 @@ export default function BookingModal({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setErrorMessage(data.error || "Unable to confirm booking. Slot may have been taken.");
+        setErrorMessage(
+          data.error || "Unable to confirm booking. Slot may have been taken.",
+        );
         setIsSubmitting(false);
         onAvailabilityConflict(data.error || "Slot conflict detected.");
         return;
@@ -236,7 +252,9 @@ export default function BookingModal({
       onBookingSuccess(data.booking);
     } catch (err) {
       console.error(err);
-      setErrorMessage("Network error during final confirmation. Please try again.");
+      setErrorMessage(
+        "Network error during final confirmation. Please try again.",
+      );
       setIsSubmitting(false);
     }
   };
@@ -292,7 +310,7 @@ export default function BookingModal({
             <div className="match-summary-item">
               <span className="label">Time</span>
               <span className="value">
-                {startTime} – {endTime} ({duration} hr)
+                {startTime} – {endTime} / ({duration} hr)
               </span>
             </div>
             <div className="match-summary-item">
@@ -313,7 +331,7 @@ export default function BookingModal({
                   id="customerName"
                   type="text"
                   required
-                  placeholder="e.g. Karthik Raja"
+                  placeholder="Enter Name"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="modal-input"
@@ -321,14 +339,24 @@ export default function BookingModal({
               </div>
 
               <div className="form-group">
-                <label htmlFor="customerPhone">
-                  Mobile Number (WhatsApp) *
-                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <label htmlFor="customerPhone">
+                    Mobile Number (WhatsApp number)*
+                    {/* <br /><span>Please enter valid (WhatsApp number)</span> */}
+                  </label>
+                  
+                </div>
                 <input
                   id="customerPhone"
                   type="tel"
                   required
-                  placeholder="e.g. 99523 23211"
+                  placeholder="Enter Mobile Number"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   className="modal-input"
@@ -340,7 +368,7 @@ export default function BookingModal({
                 <input
                   id="customerEmail"
                   type="email"
-                  placeholder="e.g. karthik@gmail.com"
+                  placeholder="Enter email"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
                   className="modal-input"
@@ -365,7 +393,7 @@ export default function BookingModal({
           <div className="form-section">
             <h4 className="form-section-title">⚽ Sport Type</h4>
             <div className="sport-options-row">
-              {[ "Cricket", "Football" ].map((s) => (
+              {["Cricket", "Football"].map((s) => (
                 <label
                   key={s}
                   className={`sport-pill ${sportType === s ? "sport-active" : ""}`}
@@ -373,7 +401,6 @@ export default function BookingModal({
                   <input
                     type="radio"
                     name="sportType"
-                    
                     value={s}
                     checked={sportType === s}
                     onChange={(e) => setSportType(e.target.value)}
@@ -399,10 +426,47 @@ export default function BookingModal({
                   onChange={(e) => setPaymentMethod(e.target.value)}
                 />
                 <div className="pay-card-content">
-                  <span className="pay-icon">📱</span>
+                  <span className="pay-icon" aria-hidden="true">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        x="3"
+                        y="5"
+                        width="18"
+                        height="14"
+                        rx="2"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
+                      <path
+                        d="M3 9H21"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
+                      <path
+                        d="M7 14H10"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M14 13L12.5 16H15L13.5 18"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+
                   <div>
                     <strong>Instant UPI</strong>
-                    <p>GPay, PhonePe, Paytm, QR</p>
+                    <p>GPay, PhonePe, Paytm</p>
                   </div>
                 </div>
               </label>

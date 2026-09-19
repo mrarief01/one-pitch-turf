@@ -10,21 +10,31 @@ import TimeSlotGrid from "@/components/booking/TimeSlotGrid";
 import BookingSummary from "@/components/booking/BookingSummary";
 import BookingModal from "@/components/booking/BookingModal";
 import BookingSuccess from "@/components/booking/BookingSuccess";
-import ConflictSimulator from "@/components/booking/ConflictSimulator";
-import { CourtId, CalculatedSlot, BookingRecord, formatISODate } from "@/lib/bookingStore";
+import {
+  CourtId,
+  CalculatedSlot,
+  BookingRecord,
+  formatISODate,
+} from "@/lib/bookingStore";
 import { useReveal } from "@/hooks/useReveal";
 
 export default function BookingPage() {
   useReveal();
 
   const [selectedCourt, setSelectedCourt] = useState<CourtId>("C1");
-  const [selectedDate, setSelectedDate] = useState<string>(() => formatISODate(new Date()));
+  const [selectedDate, setSelectedDate] = useState<string>(() =>
+    formatISODate(new Date()),
+  );
   const [slots, setSlots] = useState<CalculatedSlot[]>([]);
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false);
-  const [confirmedBooking, setConfirmedBooking] = useState<BookingRecord | null>(null);
+  const [confirmedBooking, setConfirmedBooking] =
+    useState<BookingRecord | null>(null);
   const [conflictAlert, setConflictAlert] = useState<string | null>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(
+    null,
+  );
 
   // Fetch real-time availability from backend API
   const fetchAvailability = useCallback(async () => {
@@ -33,17 +43,23 @@ export default function BookingPage() {
       const res = await fetch(`/api/availability?court=${selectedCourt}&date=${selectedDate}`);
       const data = await res.json();
       if (data.success) {
+        setAvailabilityError(null);
         setSlots(data.slots || []);
         // Prune any selected slots that are no longer available in the new query
         setSelectedSlotIds((prev) =>
           prev.filter((id) => {
             const match = data.slots.find((s: CalculatedSlot) => s.id === id);
             return match && match.status === "AVAILABLE";
-          })
+          }),
         );
+      } else {
+        setAvailabilityError(data.error || "Unable to load live availability.");
       }
     } catch (err) {
       console.error("Failed to load availability:", err);
+      setAvailabilityError(
+        "Unable to reach the live booking database. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +128,9 @@ export default function BookingPage() {
     setTimeout(() => setConflictAlert(null), 5000);
   };
 
-  const selectedSlotObjects = slots.filter((s) => selectedSlotIds.includes(s.id));
+  const selectedSlotObjects = slots.filter((s) =>
+    selectedSlotIds.includes(s.id),
+  );
 
   return (
     <>
@@ -126,21 +144,26 @@ export default function BookingPage() {
             <h1 className="booking-main-title">
               RESERVE YOUR <em>MATCH SLOT</em>
             </h1>
-            <p className="booking-lead-text">
-              Follow the simple step-by-step flow below to view pitch zones, select your date, pick live available slots, and confirm your match.
-            </p>
           </div>
 
-          {/* Conflict Engine Testing & Rule Bar */}
-          <div className="reveal">
-            <ConflictSimulator
-              onRefreshAvailability={fetchAvailability}
-              currentCourt={selectedCourt}
-            />
-          </div>
+          {availabilityError && (
+            <div
+              className="global-conflict-toast"
+              role="alert"
+              aria-live="assertive"
+            >
+              <div className="toast-body">
+                <strong>Booking unavailable:</strong> {availabilityError}
+              </div>
+            </div>
+          )}
 
           {conflictAlert && (
-            <div className="global-conflict-toast" role="alert" aria-live="assertive">
+            <div
+              className="global-conflict-toast"
+              role="alert"
+              aria-live="assertive"
+            >
               <div className="toast-icon">⚠️</div>
               <div className="toast-body">
                 <strong>Availability Notice:</strong> {conflictAlert}

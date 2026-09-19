@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { CourtId } from "@/lib/bookingStore";
 import { confirmHeldBooking } from "@/lib/bookingService";
+import { sendDualWhatsAppNotifications } from "@/lib/whatsappService";
 
 export const runtime = "nodejs";
 
@@ -27,8 +28,20 @@ export async function POST(request: NextRequest) {
       sportType,
     } = body;
 
-    if (!isCourtId(courtId) || typeof date !== "string" || !Array.isArray(slotIds) || !slotIds.length || !holdToken || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return NextResponse.json({ success: false, error: "Missing or invalid payment verification details." }, { status: 400 });
+    if (
+      !isCourtId(courtId) ||
+      typeof date !== "string" ||
+      !Array.isArray(slotIds) ||
+      !slotIds.length ||
+      !holdToken ||
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Missing or invalid payment verification details." },
+        { status: 400 }
+      );
     }
 
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -77,10 +90,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Trigger Dual WhatsApp Engine (Customer Ticket & Owner Notification Alert)
+    const notifications = await sendDualWhatsAppNotifications(confirmResult.booking);
+
     return NextResponse.json({
       success: true,
       message: "Payment verified and booking confirmed successfully.",
       booking: confirmResult.booking,
+      notifications,
     });
   } catch (error) {
     console.error("Payment verification error:", error);
