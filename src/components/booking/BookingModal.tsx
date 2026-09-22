@@ -168,7 +168,7 @@ export default function BookingModal({
           amount: orderData.amountInPaise,
           currency: orderData.currency,
           name: "OnePitch Turf",
-          image: `${window.location.origin}/images/onepitchturf_logo.jpg`,
+          // image: `${window.location.origin}/images/onepitchturf_logo.jpg`,
           description: `${court.name} booking on ${selectedDate}`,
           order_id: orderData.orderId,
           prefill: {
