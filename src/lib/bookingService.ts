@@ -7,7 +7,10 @@ import {
 } from "@/lib/bookingStore";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sendBookingConfirmationEmails } from "@/lib/email";
-import { sendBookingWhatsAppNotifications } from "@/lib/whatsapp";
+import {
+  sendDualWhatsAppNotifications,
+  WhatsAppNotificationResult,
+} from "@/lib/whatsappService";
 
 type DbBooking = {
   id: string;
@@ -359,13 +362,24 @@ export async function confirmHeldBooking(
    * Notifications must never control whether the booking
    * itself succeeds.
    */
-  await Promise.allSettled([
+  const [, whatsappResult] = await Promise.allSettled([
     sendBookingConfirmationEmails(booking),
-    sendBookingWhatsAppNotifications(booking),
+    sendDualWhatsAppNotifications(booking),
   ]);
+
+  const notifications: WhatsAppNotificationResult =
+    whatsappResult.status === "fulfilled"
+      ? whatsappResult.value
+      : {
+          success: false,
+          customerSent: false,
+          ownerSent: false,
+          details: String(whatsappResult.reason),
+        };
 
   return {
     success: true as const,
     booking,
+    notifications,
   };
 }
