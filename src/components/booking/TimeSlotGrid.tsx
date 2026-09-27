@@ -18,23 +18,49 @@ export default function TimeSlotGrid({
   isLoading = false,
   warning = null,
 }: TimeSlotGridProps) {
-  const periods: Array<{ id: SlotPeriod; title: string; subtitle: string; icon: string }> = [
-    { id: "morning", title: "Morning Slots", subtitle: "05:00 AM – 11:00 AM", icon: "🌅" },
-    { id: "afternoon", title: "Afternoon Slots", subtitle: "11:00 AM – 04:00 PM", icon: "☀️" },
-    { id: "evening", title: "Evening Floodlit", subtitle: "04:00 PM – 09:00 PM", icon: "🌆" },
-    { id: "night", title: "Night Matches", subtitle: "09:00 PM – 01:00 AM", icon: "🌙" },
+  const periods: Array<{
+    id: SlotPeriod;
+    title: string;
+    subtitle: string;
+    icon: string;
+  }> = [
+    {
+      id: "morning",
+      title: "Morning Slots",
+      subtitle: "05:00 AM – 11:00 AM",
+      icon: "🌅",
+    },
+    {
+      id: "afternoon",
+      title: "Afternoon Slots",
+      subtitle: "11:00 AM – 04:00 PM",
+      icon: "☀️",
+    },
+    {
+      id: "evening",
+      title: "Evening Floodlit",
+      subtitle: "04:00 PM – 09:00 PM",
+      icon: "🌆",
+    },
+    {
+      id: "night",
+      title: "Night Matches",
+      subtitle: "09:00 PM – 01:00 AM",
+      icon: "🌙",
+    },
   ];
 
   return (
     <div className="time-slot-section">
       <div className="section-title-row">
         <div>
-          <span className="eyebrow">Step 3</span>
+          {/* <span className="eyebrow">Step 3</span> */}
           <h2 className="step-title">Select Available Time Slot</h2>
         </div>
-        <p className="step-desc">
-          Click to select one or multiple consecutive hours. Real-time availability updates instantly.
-        </p>
+        {/* <p className="step-desc">
+          Click to select one or multiple consecutive hours. Real-time
+          availability updates instantly.
+        </p> */}
       </div>
 
       {warning && <div className="modal-error-banner">⚠️ {warning}</div>}
@@ -57,10 +83,10 @@ export default function TimeSlotGrid({
           <span className="legend-box unavailable-box"></span>
           <span>Conflict / Unavailable</span>
         </div>
-        <div className="legend-item">
+        {/* <div className="legend-item">
           <span className="legend-box expired-box"></span>
           <span>Passed</span>
-        </div>
+        </div> */}
       </div>
 
       {isLoading ? (
@@ -71,7 +97,15 @@ export default function TimeSlotGrid({
       ) : (
         <div className="periods-container">
           {periods.map((period) => {
-            const periodSlots = slots.filter((s) => s.period === period.id);
+            /**
+             * Expired slots are removed from the UI.
+             *
+             * The backend decides when a slot becomes EXPIRED.
+             * We simply don't render those slots here.
+             */
+            const periodSlots = slots.filter(
+              (s) => s.period === period.id && s.status !== "EXPIRED",
+            );
             if (periodSlots.length === 0) return null;
 
             return (
@@ -90,7 +124,7 @@ export default function TimeSlotGrid({
                     const isAvailable = slot.status === "AVAILABLE";
                     const isBooked = slot.status === "BOOKED";
                     const isUnavailable = slot.status === "UNAVAILABLE";
-                    const isExpired = slot.status === "EXPIRED";
+                    // const isExpired = slot.status === "EXPIRED";
                     const isHeld = slot.status === "HELD";
 
                     let statusClass = "slot-available";
@@ -98,7 +132,7 @@ export default function TimeSlotGrid({
                     else if (isBooked) statusClass = "slot-booked";
                     else if (isHeld) statusClass = "slot-held";
                     else if (isUnavailable) statusClass = "slot-unavailable";
-                    else if (isExpired) statusClass = "slot-expired";
+                    // else if (isExpired) statusClass = "slot-expired";
 
                     return (
                       <div
@@ -122,23 +156,34 @@ export default function TimeSlotGrid({
 
                         <div className="slot-card-bottom">
                           {isSelected ? (
-                            <span className="status-label selected-txt">✓ SELECTED</span>
+                            <span className="status-label selected-txt">
+                              ✓ SELECTED
+                            </span>
                           ) : isBooked ? (
-                            <span className="status-label booked-txt">BOOKED</span>
+                            <span className="status-label booked-txt">
+                              BOOKED
+                            </span>
                           ) : isHeld ? (
-                            <span className="status-label held-txt">IN CHECKOUT</span>
+                            <span className="status-label held-txt">
+                              IN CHECKOUT
+                            </span>
                           ) : isUnavailable ? (
-                            <span className="status-label unavail-txt">CONFLICT</span>
-                          ) : isExpired ? (
-                            <span className="status-label expired-txt">CLOSED</span>
+                            <span className="status-label unavail-txt">
+                              CONFLICT
+                            </span>
                           ) : (
-                            <span className="status-label avail-txt">₹{slot.price}</span>
+                            <span className="status-label avail-txt">
+                              ₹{slot.price}
+                            </span>
                           )}
                         </div>
 
                         {/* Hover Conflict Tooltip / Reason Tag */}
                         {isUnavailable && slot.conflictReason && (
-                          <div className="conflict-badge-banner" title={slot.conflictReason}>
+                          <div
+                            className="conflict-badge-banner"
+                            title={slot.conflictReason}
+                          >
                             <span>{slot.conflictReason}</span>
                           </div>
                         )}

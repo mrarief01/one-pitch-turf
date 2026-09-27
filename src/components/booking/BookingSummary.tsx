@@ -135,7 +135,7 @@ export default function BookingSummary({
         </div>
       </div>
 
-      <div className="summary-action-box">
+      {/* <div className="summary-action-box">
         <button
           type="button"
           className={`btn btn-primary summary-cta-btn ${!hasSelected ? "btn-disabled" : ""}`}
@@ -143,14 +143,14 @@ export default function BookingSummary({
           onClick={onProceedToReview}
         >
           {hasSelected
-            ? "Continue to Booking Review →"
+            ? "Continue to Booking Review"
             : "Select an Available Slot Above to Continue"}
         </button>
 
         <p className="summary-guarantee-note">
           🔒 Real-time slot locking • Zero double-booking guarantee
         </p>
-      </div>
+      </div> */}
     </div>
   );
 }

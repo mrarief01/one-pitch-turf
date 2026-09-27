@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { CourtId } from "@/lib/bookingStore";
 import { confirmHeldBooking } from "@/lib/bookingService";
-import { sendDualWhatsAppNotifications } from "@/lib/whatsappService";
 
 export const runtime = "nodejs";
 
@@ -90,14 +89,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Trigger Dual WhatsApp Engine (Customer Ticket & Owner Notification Alert)
-    const notifications = await sendDualWhatsAppNotifications(confirmResult.booking);
-
     return NextResponse.json({
       success: true,
       message: "Payment verified and booking confirmed successfully.",
       booking: confirmResult.booking,
-      notifications,
+      notifications: confirmResult.notifications,
     });
   } catch (error) {
     console.error("Payment verification error:", error);

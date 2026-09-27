@@ -2,11 +2,11 @@
   --bg: #0a0f0c;
   --panel: #0d1411;
   --chalk: #f4f6f0;
-  --muted: #93a79a;
+  --muted: #666666;
   --flood: #ffb13c;
   --pitch: #4ad077;
   --line: rgba(244, 246, 240, 0.1);
-  --display: "Teko", sans-serif;
+  --display: "Roboto", sans-serif;
   --body: "Inter", sans-serif;
   --mono: "JetBrains Mono", monospace;
 }
@@ -56,15 +56,15 @@ h2,
 h3,
 h4 {
   font-family: var(--display);
-  font-weight: 600;
-  text-transform: uppercase;
+  /* font-weight: 600; */
+  /* text-transform: uppercase; */
   line-height: 0.94;
-  letter-spacing: 0.005em;
+  /* letter-spacing: 0.005em; */
 }
 
 .eyebrow {
   font-family: var(--mono);
-  font-size: 0.7rem;
+  font-size: 0.5rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--flood);
@@ -106,7 +106,7 @@ nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 78px;
+  height: 64px;
 }
 
 .logo {
@@ -790,7 +790,7 @@ footer {
 }
 
 .booking-main-title {
-  font-size: clamp(2.4rem, 5.5vw, 4.4rem);
+  font-size: clamp(1.125rem, 1.5vw, 4rem);
   color: var(--chalk);
   margin-top: 6px;
 }
@@ -855,14 +855,301 @@ footer {
 }
 
 /* ==========================================================================
+   BOOKING BREADCRUMB NAVIGATION
+   ========================================================================== */
+
+.booking-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 32px;
+  padding: 4px 20px;
+  position: sticky;
+  top: 64px;
+  z-index: 10;
+  background: var(--panel);
+  /* border: 1px solid var(--line); */
+  border-radius: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.booking-breadcrumb::-webkit-scrollbar {
+  display: none;
+}
+
+.breadcrumb-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: default;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.breadcrumb-step__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  border: 2px solid currentColor;
+}
+
+.breadcrumb-step__short {
+  display: none;
+}
+
+/* Future / locked step */
+.breadcrumb-step--future {
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.breadcrumb-step--future .breadcrumb-step__num {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+/* Completed step — clickable */
+.breadcrumb-step--completed {
+  color: var(--flood);
+  cursor: pointer;
+}
+
+.breadcrumb-step--completed:hover {
+  background: rgba(255 177 60 / 0.10);
+  color: var(--flood);
+}
+
+.breadcrumb-step--completed .breadcrumb-step__num {
+  background: var(--flood);
+  border-color: var(--flood);
+  color: var(--bg);
+}
+
+/* Active / current step */
+.breadcrumb-step--active {
+  color: var(--chalk);
+  background: rgba(255 255 255 / 0.06);
+  cursor: default;
+}
+
+.breadcrumb-step--active .breadcrumb-step__num {
+  background: var(--chalk);
+  border-color: var(--chalk);
+  color: var(--bg);
+}
+
+.breadcrumb-divider {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  opacity: 0.45;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+/* ==========================================================================
+   MULTI-STEP SCREEN LAYOUT
+   ========================================================================== */
+
+.booking-step-screen {
+  width: 100%;
+}
+
+@keyframes stepFadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: stepFadeIn 0.35s ease both;
+}
+
+.step-section-label {
+  text-align: center;
+  padding-bottom: 4px;
+}
+
+.step-screen-title {
+  font-size: clamp(1.5rem, 1.3vw, 2.2rem);
+  color: var(--chalk);
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.step-screen-desc {
+  color: var(--muted);
+  font-size: 0.95rem;
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+/* Step footer: back button (left) + hint + continue button (right) */
+.step-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.step-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.step-hint-text {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.step-continue-btn {
+  min-width: 220px;
+}
+
+.step-back-btn {
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   INLINE CHECKOUT CARD (Step 3 — no modal backdrop)
+   ========================================================================== */
+
+.inline-checkout-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 28px 28px 0;
+  overflow: hidden;
+}
+
+.inline-checkout-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.inline-checkout-title {
+  font-size: 1.35rem;
+  color: var(--chalk);
+  margin-top: 4px;
+}
+
+.booking-inline-checkout {
+  /* content inherits inline-checkout-card padding */
+}
+
+.inline-checkout-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 20px;
+  background: rgba(255 255 255 / 0.04);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.inline-checkout-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   RESPONSIVE — multi-step & breadcrumb
+   ========================================================================== */
+
+@media (max-width: 600px) {
+  .breadcrumb-step__label {
+    display: none;
+  }
+
+  .breadcrumb-step__short {
+    display: inline;
+  }
+
+  .breadcrumb-step {
+    padding: 8px 10px;
+    gap: 7px;
+  }
+
+  .step-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .step-footer-right {
+    flex-direction: column;
+    align-items: stretch;
+    margin-left: 0;
+  }
+
+  .step-continue-btn,
+  .step-back-btn {
+    width: 100%;
+    min-width: unset;
+    text-align: center;
+  }
+
+  .inline-checkout-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inline-checkout-footer .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .inline-checkout-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-checkout-card {
+    padding: 20px 16px 0;
+  }
+}
+
+/* ==========================================================================
    1. TURF VISUALIZER
    ========================================================================== */
 
 .turf-visualizer-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  /* background: var(--panel); */
+  /* border: 1px solid var(--line); */
   border-radius: 6px;
-  padding: 24px;
+  /* padding: 24px; */
 }
 
 .turf-visualizer-header {
@@ -875,7 +1162,7 @@ footer {
 }
 
 .turf-title {
-  font-size: 1.5rem;
+  font-size: 1rem;
   margin-top: 4px;
   color: var(--chalk);
 }
@@ -1030,12 +1317,15 @@ footer {
 
 /* Zone Info Card */
 .zone-info-card {
-  background: rgba(10, 15, 12, 0.88);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.052);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(12px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  /* border: 1px solid var(--line); */
   padding: 8px 12px;
-  border-radius: 4px;
-  max-width: 150px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.588);
+  max-width: 200px;
   pointer-events: none;
 }
 
@@ -1047,28 +1337,28 @@ footer {
 
 .chip-code {
   font-family: var(--display);
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--flood);
   line-height: 1;
 }
 
 .chip-name {
-  font-family: var(--mono);
+  font-family: var(--body);
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--chalk);
 }
 
 .zone-spec {
-  font-size: 0.62rem;
-  color: var(--muted);
-  margin-top: 2px;
+  font-size: 0.725rem;
+  color: var(--chalk);
+  /* margin-top: 2px; */
 }
 
 .zone-price-tag {
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.700rem;
   color: var(--pitch);
   font-weight: 600;
   margin-top: 3px;
@@ -1173,27 +1463,30 @@ footer {
 }
 
 .quick-toggle-group {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  flex-wrap: wrap;
   padding-top: 12px;
-  border-top: 1px solid var(--line);
+  /* border-top: 1px solid var(--line); */
+}
+
+.quick-toggle-group .switch-btn {
+  width: 100%;
 }
 
 .toggle-label {
   font-family: var(--mono);
   font-size: 0.68rem;
   color: var(--muted);
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
 
 .switch-btn {
   background: var(--bg);
   border: 1px solid var(--line);
   color: var(--chalk);
-  font-family: var(--mono);
-  font-size: 0.7rem;
+  font-family: var(--display);
+  font-size: 0.750rem;
   padding: 6px 14px;
   border-radius: 3px;
   cursor: pointer;
@@ -1234,7 +1527,7 @@ footer {
 }
 
 .step-title {
-  font-size: 1.6rem;
+  font-size: 1.1rem;
   margin-top: 4px;
   color: var(--chalk);
 }
@@ -1441,7 +1734,8 @@ footer {
 .date-pill {
   position: relative;
   background: var(--bg);
-  border: 1px solid var(--line);
+  border: none;
+  /* border: 1px solid var(--line); */
   border-radius: 6px;
   padding: 14px 6px 12px;
   text-align: center;
@@ -1486,7 +1780,7 @@ footer {
 
 .date-number {
   font-family: var(--display);
-  font-size: 1.85rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--chalk);
   line-height: 1;
@@ -2348,15 +2642,15 @@ footer {
   gap: 8px;
 }
 
-.whatsapp-btn {
-  background: #25d366;
-  color: #0a0f0c;
+.reflection-btn {
+  /* background: #25d366; */
+  /* color: #0a0f0c; */
   font-weight: 700;
   position: relative;
   overflow: hidden;
 }
 /* Moving reflection */
-.whatsapp-btn::after {
+.reflection-btn::after {
   content: "";
   position: absolute;
   top: 0;
@@ -2428,7 +2722,7 @@ footer {
 @media (max-width: 900px) {
   .nav-links {
     position: fixed;
-    top: 78px;
+    top: 64px;
     left: 0;
     right: 0;
     background: var(--bg);

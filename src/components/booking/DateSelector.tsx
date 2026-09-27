@@ -51,10 +51,10 @@ export default function DateSelector({
 
   return (
     <div className="date-selector-section">
-      <div className="section-title-row date-title-row">
+      {/* <div className="section-title-row date-title-row">
         <div>
           <span className="eyebrow">Step 2</span>
-          <h2 className="step-title">Select Booking Date (Next 7 Days)</h2>
+          <p className="step-title">Select Booking Date</p>
         </div>
         <div className="date-nav-controls">
           <button
@@ -74,7 +74,7 @@ export default function DateSelector({
             →
           </button>
         </div>
-      </div>
+      </div> */}
 
       <div className="date-scroll-container date-seven-days-grid" ref={scrollRef}>
         {dates.map((item) => {
@@ -89,7 +89,7 @@ export default function DateSelector({
               }`}
               onClick={() => onSelectDate(item.iso)}
             >
-              {item.isToday && <span className="today-badge">Today</span>}
+              {/* {item.isToday && <span className="today-badge">Today</span>} */}
               <span className="date-weekday">{item.dayName}</span>
               <span className="date-number">{item.dayNum}</span>
               <span className="date-month">{item.monthName}</span>

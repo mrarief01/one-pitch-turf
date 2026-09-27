@@ -27,7 +27,7 @@ export default function TurfVisualizer({
       <div className="turf-visualizer-header">
         <div>
           <span className="eyebrow">Interactive Pitch Map</span>
-          <h3 className="turf-title">Ground Layout &amp; Zone Selection</h3>
+          <p className="turf-title">Ground Layout &amp; Zone Selection</p>
         </div>
         <div className="turf-tag-badge">
           {isFull ? (
@@ -68,22 +68,22 @@ export default function TurfVisualizer({
                   <span className="chip-name">Court 1</span>
                 </div>
                 <p className="zone-spec">Left Half</p>
-                <div className="zone-price-tag">₹800/hr</div>
+                {/* <div className="zone-price-tag">₹800/hr</div> */}
               </div>
 
               {isC1 && (
                 <div className="zone-active-pill">
-                  <span className="dot pulse"></span> ACTIVE SELECTION
+                  <span className="dot pulse"></span>Selected
                 </div>
               )}
             </div>
 
             {/* Center Dividing Line Marker */}
             <div className="turf-center-divider">
-              <div className="divider-line"></div>
-              <div className="divider-badge" title="Center Dividing Boundary">
+              {/* <div className="divider-line"></div> */}
+              {/* <div className="divider-badge" title="Center Dividing Boundary">
                 <span>DIVIDER</span>
-              </div>
+              </div> */}
             </div>
 
             {/* Right Half: Court 2 (C2) */}
@@ -100,15 +100,15 @@ export default function TurfVisualizer({
               <div className="zone-info-card right-card">
                 <div className="zone-chip">
                   <span className="chip-code">C2</span>
-                  <span className="chip-name">Court 2</span>
+                  {/* <span className="chip-name">Court 2</span> */}
                 </div>
                 <p className="zone-spec">Right Half</p>
-                <div className="zone-price-tag">₹800/hr</div>
+                {/* <div className="zone-price-tag">₹800/hr</div> */}
               </div>
 
               {isC2 && (
                 <div className="zone-active-pill">
-                  <span className="dot pulse"></span> ACTIVE SELECTION
+                  <span className="dot pulse"></span>Selected
                 </div>
               )}
             </div>
@@ -120,10 +120,10 @@ export default function TurfVisualizer({
               <div className="full-banner-content">
                 <div className="full-turf-icon">🏆</div>
                 <div>
-                  <h4>FULL TURF — ENTIRE PITCH</h4>
-                  <p>Includes Court 1 + Court 2 simultaneously for 8v8 / 11v11 / Tournaments</p>
+                  <h5>FULL TURF — ENTIRE PITCH</h5>
+                  {/* <p>Includes Court 1 + Court 2 simultaneously for 8v8 / 11v11 / Tournaments</p> */}
                 </div>
-                <div className="full-banner-price">₹1,500 / hr</div>
+                {/* <div className="full-banner-price">₹1,500 / hr</div> */}
               </div>
             </div>
           )}
@@ -132,16 +132,16 @@ export default function TurfVisualizer({
 
       {/* Quick Visualizer Footbar */}
       <div className="turf-visualizer-footer">
-        <div className="spec-indicator">
+        {/* <div className="spec-indicator">
           <span className="spec-dot green"></span>
           <span>FIFA Quality Pro Synthetic Surface</span>
         </div>
         <div className="spec-indicator">
           <span className="spec-dot amber"></span>
           <span>High-Mast LED Floodlighting</span>
-        </div>
+        </div> */}
         <div className="quick-toggle-group">
-          <span className="toggle-label">Direct Pitch Switch:</span>
+          {/* <span className="toggle-label">Direct Pitch Switch:</span> */}
           <button
             type="button"
             className={`switch-btn ${isC1 ? "selected" : ""}`}
