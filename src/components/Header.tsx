@@ -42,7 +42,7 @@ export default function Header() {
             alt="OnePitch logo"
             className="logo-image"
           />
-          <span>OnePitch</span>
+          <h6>OnePitch</h6>
         </Link>
         <ul className={`nav-links ${isMenuOpen ? "open" : ""}`} id="navLinks">
           {navItems.map((item) => {

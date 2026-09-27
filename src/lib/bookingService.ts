@@ -95,6 +95,50 @@ function getIndiaDate() {
   )}-${String(indiaNow.day).padStart(2, "0")}`;
 }
 
+/**
+ * Convert an hour value from MASTER_SLOTS into a comparable
+ * absolute hour for the current business day.
+ *
+ * MASTER_SLOTS intentionally uses:
+ *
+ * 23 -> 24  = 11 PM -> 12 AM
+ * 24 -> 25  = 12 AM -> 1 AM
+ *
+ * This keeps the slots in chronological order.
+ */
+function isSlotFinished(
+  slot: (typeof MASTER_SLOTS)[number],
+  currentHour: number,
+  currentMinute: number,
+) {
+  /**
+   * Convert current India time into the same 24+ hour system
+   * used by MASTER_SLOTS.
+   *
+   * Example:
+   *
+   * 00:30 -> 24.5
+   * 01:00 -> 25
+   * 14:30 -> 14.5
+   */
+  const effectiveCurrentHour =
+    currentHour === 0
+      ? 24 + currentMinute / 60
+      : currentHour + currentMinute / 60;
+
+  /**
+   * A slot remains visible until its END time.
+   *
+   * Example:
+   * 13-14 (1 PM - 2 PM)
+   *
+   * 1:30 PM -> 13.5 < 14 -> visible
+   * 1:59 PM -> 13.98 < 14 -> visible
+   * 2:00 PM -> 14 >= 14 -> expired
+   */
+  return slot.endHour <= effectiveCurrentHour;
+}
+
 function mapBooking(b: DbBooking): BookingRecord {
   return {
     id: b.id,
@@ -158,11 +202,7 @@ export async function getAvailability(
   >[];
 
   /**
-   * IMPORTANT:
-   * Use India time instead of the server's timezone.
-   *
-   * This makes local development and Vercel production
-   * behave the same way.
+   * Always calculate availability using India time.
    */
   const indiaNow = getIndiaDateTime();
   const indiaDate = getIndiaDate();
@@ -172,50 +212,26 @@ export async function getAvailability(
   return MASTER_SLOTS.map((slot) => {
     const price = COURTS[courtId].pricePerHour;
 
-    /**
-     * SLOT EXPIRY
-     *
-     * Current behavior:
-     *
-     * 10:00 - 11:00
-     * 10:00 -> AVAILABLE
-     * 10:29 -> AVAILABLE
-     * 10:30 -> EXPIRED
-     * 11:00 -> EXPIRED
-     *
-     * This preserves your existing 30-minute cutoff logic.
-     */
     if (
       today &&
       slot.startHour < 24 &&
-      (slot.endHour <= indiaNow.hour ||
-        (slot.startHour <= indiaNow.hour && indiaNow.minute >= 30))
+      (slot.startHour < indiaNow.hour ||
+        (slot.startHour === indiaNow.hour && indiaNow.minute >= 30))
     ) {
       return {
         ...slot,
         price,
         status: "EXPIRED" as const,
-        conflictReason: "This time slot has already passed for today.",
+        conflictReason: "This time slot has expired.",
       };
     }
 
-    /**
-     * Check database bookings.
-     */
     const conflicts = bookings.filter((b) => b.slot_ids.includes(slot.id));
 
-    /**
-     * Full Turf blocks both C1 and C2.
-     * C1 blocks C1.
-     * C2 blocks C2.
-     */
     const blocking = conflicts.find(
       (b) => b.court_id === "F" || courtId === "F" || b.court_id === courtId,
     );
 
-    /**
-     * No booking conflict.
-     */
     if (!blocking) {
       return {
         ...slot,
@@ -224,15 +240,7 @@ export async function getAvailability(
       };
     }
 
-    /**
-     * Existing booking is currently being held
-     * during checkout.
-     */
     const held = blocking.status === "HELD";
-
-    /**
-     * Check whether the booking is for the same court.
-     */
     const sameCourt = blocking.court_id === courtId;
 
     return {
@@ -243,11 +251,8 @@ export async function getAvailability(
           ? "HELD"
           : "BOOKED"
         : "UNAVAILABLE") as CalculatedSlot["status"],
-
       bookedCourt: blocking.court_id,
-
       bookedBy: blocking.team_name || "Another customer",
-
       conflictReason: held
         ? "This slot is currently in checkout."
         : `${

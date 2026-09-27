@@ -10,6 +10,7 @@ import TimeSlotGrid from "@/components/booking/TimeSlotGrid";
 import BookingSummary from "@/components/booking/BookingSummary";
 import BookingModal from "@/components/booking/BookingModal";
 import BookingSuccess from "@/components/booking/BookingSuccess";
+import BookingBreadcrumb, { BookingStep } from "@/components/booking/BookingBreadcrumb";
 import {
   CourtId,
   CalculatedSlot,
@@ -22,6 +23,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 export default function BookingPage() {
   useReveal();
 
+  // ── Booking data state ──────────────────────────────────────────────────────
   const [selectedCourt, setSelectedCourt] = useState<CourtId>("C1");
 
   const [selectedDate, setSelectedDate] = useState<string>(() =>
@@ -33,8 +35,6 @@ export default function BookingPage() {
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false);
-
   const [confirmedBooking, setConfirmedBooking] =
     useState<BookingRecord | null>(null);
 
@@ -43,6 +43,49 @@ export default function BookingPage() {
   const [availabilityError, setAvailabilityError] = useState<string | null>(
     null,
   );
+
+  // ── Multi-step navigation state ─────────────────────────────────────────────
+  const [currentStep, setCurrentStep] = useState<BookingStep>(1);
+  const [maxReachedStep, setMaxReachedStep] = useState<BookingStep>(1);
+
+  // Push a history entry so browser Back navigates between steps
+  const pushStepHistory = useCallback((step: BookingStep) => {
+    window.history.pushState({ bookingStep: step }, "");
+  }, []);
+
+  // Navigate to a step (forward or backward breadcrumb click)
+  const goToStep = useCallback(
+    (step: BookingStep, pushHistory = true) => {
+      setCurrentStep(step);
+      if (step > maxReachedStep) {
+        setMaxReachedStep(step);
+      }
+      if (pushHistory) {
+        pushStepHistory(step);
+      }
+      // Scroll to top of booking content area on step change
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [maxReachedStep, pushStepHistory],
+  );
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const state = e.state as { bookingStep?: BookingStep } | null;
+      if (state?.bookingStep) {
+        // Navigate without pushing another history entry
+        setCurrentStep(state.bookingStep);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+
+    // Push initial state so Back from Step 1 exits the page correctly
+    window.history.replaceState({ bookingStep: 1 }, "");
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   /**
    * Fetch authoritative availability from our backend API.
@@ -120,6 +163,32 @@ export default function BookingPage() {
    */
   useEffect(() => {
     fetchAvailability();
+  }, [fetchAvailability]);
+
+  /**
+   * Keep availability synchronized while the booking page
+   * remains open.
+   *
+   * This is required because time passing does not create
+   * a Supabase realtime event.
+   *
+   * Example:
+   *
+   * 1:00 PM - 2:00 PM
+   *
+   * At 1:59 PM → slot is visible
+   * At 2:00 PM → refresh availability
+   *              → backend marks it EXPIRED
+   *              → TimeSlotGrid removes it
+   */
+  useEffect(() => {
+    const availabilityRefreshInterval = window.setInterval(() => {
+      fetchAvailability(true);
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(availabilityRefreshInterval);
+    };
   }, [fetchAvailability]);
 
   /**
@@ -224,10 +293,17 @@ export default function BookingPage() {
 
   /**
    * Change court.
+   * If the user is going back to Step 1 and changes court,
+   * clear slot selections and reset progress so they must re-pick in Step 2.
    */
   const handleCourtChange = (court: CourtId) => {
-    setSelectedCourt(court);
-    setSelectedSlotIds([]);
+    if (court !== selectedCourt) {
+      setSelectedCourt(court);
+      setSelectedSlotIds([]);
+      // Reset maxReachedStep so Step 2 & 3 breadcrumbs become non-clickable
+      // until the user has re-selected a slot
+      setMaxReachedStep(1);
+    }
   };
 
   /**
@@ -242,7 +318,6 @@ export default function BookingPage() {
    * Booking completed successfully.
    */
   const handleBookingSuccess = (booking: BookingRecord) => {
-    setIsReviewOpen(false);
     setConfirmedBooking(booking);
 
     // Refresh availability after successful booking.
@@ -255,6 +330,9 @@ export default function BookingPage() {
   const handleBookAnother = () => {
     setConfirmedBooking(null);
     setSelectedSlotIds([]);
+    setCurrentStep(1);
+    setMaxReachedStep(1);
+    window.history.replaceState({ bookingStep: 1 }, "");
 
     fetchAvailability();
   };
@@ -281,6 +359,22 @@ export default function BookingPage() {
     selectedSlotIds.includes(slot.id),
   );
 
+  const hasSlotSelected = selectedSlotIds.length > 0;
+
+  // ── Step Continue handler ───────────────────────────────────────────────────
+  const handleContinue = () => {
+    const next = (currentStep + 1) as BookingStep;
+    if (next > 3) return;
+    goToStep(next);
+  };
+
+  // ── Breadcrumb step click ───────────────────────────────────────────────────
+  const handleStepClick = (step: BookingStep) => {
+    if (step <= maxReachedStep && step !== currentStep) {
+      goToStep(step);
+    }
+  };
+
   return (
     <>
       <Header />
@@ -289,11 +383,9 @@ export default function BookingPage() {
         <div className="wrap booking-container-wrap">
           {/* Booking Page Hero Banner */}
           <div className="booking-page-header reveal">
-            <span className="eyebrow">Real-Time Booking Engine</span>
-
-            <h1 className="booking-main-title">
+            <h5 className="booking-main-title">
               RESERVE YOUR <em>MATCH SLOT</em>
-            </h1>
+            </h5>
           </div>
 
           {/* General availability error */}
@@ -339,65 +431,164 @@ export default function BookingPage() {
               onBookAnother={handleBookAnother}
             />
           ) : (
-            <div className="booking-vertical-flow">
-              {/* 1. Interactive Pitch Map */}
-              <div className="reveal flow-step-card">
-                <TurfVisualizer
-                  selectedCourt={selectedCourt}
-                  onSelectCourt={handleCourtChange}
-                />
-              </div>
+            <>
+              {/* ── Breadcrumb navigation ── */}
+              <BookingBreadcrumb
+                currentStep={currentStep}
+                maxReachedStep={maxReachedStep}
+                onStepClick={handleStepClick}
+              />
 
-              {/* 2. Court Selection */}
-              <div className="reveal flow-step-card">
-                <CourtSelector
-                  selectedCourt={selectedCourt}
-                  onSelectCourt={handleCourtChange}
-                />
-              </div>
+              {/* ── Step screens ── */}
+              <div className="booking-step-screen">
+                {/* STEP 1: Select Zone */}
+                {currentStep === 1 && (
+                  <div className="step-content">
+                    <div className="step-section-label">
+                      {/* <h2 className="step-screen-title">Select Your Zone</h2> */}
+                      <p className="step-screen-desc">
+                        Choose a court from the interactive pitch map below,
+                        then continue.
+                      </p>
+                    </div>
 
-              {/* 3. Booking Date */}
-              <div className="reveal flow-step-card">
-                <DateSelector
-                  selectedDate={selectedDate}
-                  onSelectDate={handleDateChange}
-                  daysCount={7}
-                />
-              </div>
+                    <div className="flow-step-card">
+                      <TurfVisualizer
+                        selectedCourt={selectedCourt}
+                        onSelectCourt={handleCourtChange}
+                      />
+                    </div>
 
-              {/* 4. Available Time Slots */}
-              <div className="reveal flow-step-card">
-                <TimeSlotGrid
-                  slots={slots}
-                  selectedSlotIds={selectedSlotIds}
-                  onToggleSlot={handleToggleSlot}
-                  isLoading={isLoading}
-                />
-              </div>
+                    <div className="flow-step-card">
+                      <CourtSelector
+                        selectedCourt={selectedCourt}
+                        onSelectCourt={handleCourtChange}
+                      />
+                    </div>
 
-              {/* 5. Booking Summary */}
-              <div className="reveal flow-step-card">
-                <BookingSummary
-                  selectedCourt={selectedCourt}
-                  selectedDate={selectedDate}
-                  selectedSlots={selectedSlotObjects}
-                  onProceedToReview={() => setIsReviewOpen(true)}
-                />
+                    <div className="step-footer">
+                      <div className="step-footer-right">
+                        <button
+                          type="button"
+                          className="btn btn-primary step-continue-btn"
+                          onClick={handleContinue}
+                        >
+                          Continue to Booking Details →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: Booking Details */}
+                {currentStep === 2 && (
+                  <div className="step-content">
+                    <div className="step-section-label">
+                      {/* <span className="eyebrow">Step 2 of 3</span> */}
+                      {/* <h2 className="step-screen-title">Booking Details</h2> */}
+                      <p className="step-screen-desc">
+                        Pick a date and select your preferred time slot(s).
+                      </p>
+                    </div>
+
+                    <div className="flow-step-card">
+                      <DateSelector
+                        selectedDate={selectedDate}
+                        onSelectDate={handleDateChange}
+                        daysCount={7}
+                      />
+                    </div>
+
+                    <div className="flow-step-card">
+                      <TimeSlotGrid
+                        slots={slots}
+                        selectedSlotIds={selectedSlotIds}
+                        onToggleSlot={handleToggleSlot}
+                        isLoading={isLoading}
+                      />
+                    </div>
+
+                    <div className="step-footer">
+                      <button
+                        type="button"
+                        className="btn btn-ghost step-back-btn"
+                        onClick={() => goToStep(1)}
+                      >
+                        ← Back to Zone
+                      </button>
+                      <div className="step-footer-right">
+                        {!hasSlotSelected && (
+                          <span className="step-hint-text">
+                            Select at least one slot to continue
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-primary step-continue-btn"
+                          onClick={handleContinue}
+                          disabled={!hasSlotSelected}
+                        >
+                          Continue to Review →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: Review & Pay */}
+                {currentStep === 3 && (
+                  <div className="step-content">
+                    <div className="step-section-label">
+                      {/* <span className="eyebrow">Step 3 of 3</span> */}
+                      {/* <h2 className="step-screen-title">Review &amp; Pay</h2> */}
+                      <p className="step-screen-desc">
+                        Review your booking summary, enter your details, and
+                        complete payment.
+                      </p>
+                    </div>
+
+                    {/* Read-only booking summary */}
+                    <div className="flow-step-card">
+                      <BookingSummary
+                        selectedCourt={selectedCourt}
+                        selectedDate={selectedDate}
+                        selectedSlots={selectedSlotObjects}
+                        onProceedToReview={() => {
+                          /* no-op: we're already on Step 3 */
+                        }}
+                      />
+                    </div>
+
+                    {/* Inline checkout form (no modal backdrop) */}
+                    <div className="flow-step-card">
+                      <div className="inline-checkout-card">
+                        <div className="inline-checkout-header">
+                          <span className="eyebrow">
+                            Checkout &amp; Verification
+                          </span>
+                          <h3 className="inline-checkout-title">
+                            Player Details &amp; Payment
+                          </h3>
+                        </div>
+
+                        <BookingModal
+                          isOpen={true}
+                          inlineMode={true}
+                          onClose={() => goToStep(2)}
+                          selectedCourt={selectedCourt}
+                          selectedDate={selectedDate}
+                          selectedSlots={selectedSlotObjects}
+                          onBookingSuccess={handleBookingSuccess}
+                          onAvailabilityConflict={handleAvailabilityConflict}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            </>
           )}
         </div>
-
-        {/* Review & Hold Checkout Modal */}
-        <BookingModal
-          isOpen={isReviewOpen}
-          onClose={() => setIsReviewOpen(false)}
-          selectedCourt={selectedCourt}
-          selectedDate={selectedDate}
-          selectedSlots={selectedSlotObjects}
-          onBookingSuccess={handleBookingSuccess}
-          onAvailabilityConflict={handleAvailabilityConflict}
-        />
       </main>
 
       <Footer />

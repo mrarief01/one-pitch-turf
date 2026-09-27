@@ -31,6 +31,11 @@ interface BookingModalProps {
   selectedSlots: CalculatedSlot[];
   onBookingSuccess: (booking: BookingRecord) => void;
   onAvailabilityConflict: (message: string) => void;
+  /**
+   * When true, renders as an inline page card (no backdrop overlay, no close ×).
+   * The "Cancel" button navigates back (calls onClose which steps back in the flow).
+   */
+  inlineMode?: boolean;
 }
 
 export default function BookingModal({
@@ -41,6 +46,7 @@ export default function BookingModal({
   selectedSlots,
   onBookingSuccess,
   onAvailabilityConflict,
+  inlineMode = false,
 }: BookingModalProps) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -51,8 +57,8 @@ export default function BookingModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // 5-minute hold countdown timer
-  const [timeLeft, setTimeLeft] = useState<number>(300); // 300 seconds = 5 min
+  // 5-minute hold countdown timer — only used in legacy modal mode
+  const [timeLeft, setTimeLeft] = useState<number>(300);
 
   useEffect(() => {
     if (!isOpen) {
@@ -69,22 +75,25 @@ export default function BookingModal({
       return;
     }
 
+    // In inline mode there is no pre-held slot, so no countdown needed
+    if (inlineMode) return;
+
     const interval = window.setInterval(() => {
       setTimeLeft((prev) => Math.max(prev - 1, 0));
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, inlineMode]);
 
-  // Handle hold expiration OUTSIDE the state updater
+  // Handle hold expiration OUTSIDE the state updater (legacy modal only)
   useEffect(() => {
-    if (!isOpen || timeLeft !== 0) return;
+    if (inlineMode || !isOpen || timeLeft !== 0) return;
 
     onClose();
     onAvailabilityConflict(
       "Your 5-minute temporary hold expired. Please reselect your slot.",
     );
-  }, [isOpen, timeLeft, onClose, onAvailabilityConflict]);
+  }, [inlineMode, isOpen, timeLeft, onClose, onAvailabilityConflict]);
 
   // Payment and validation failures are transient notifications.
   useEffect(() => {
@@ -92,6 +101,12 @@ export default function BookingModal({
     const timeout = window.setTimeout(() => setErrorMessage(null), 5000);
     return () => window.clearTimeout(timeout);
   }, [errorMessage]);
+
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
 
   if (!isOpen) return null;
 
@@ -103,12 +118,6 @@ export default function BookingModal({
   const endTime = sortedSlots[sortedSlots.length - 1]?.endTime || "";
   const duration = sortedSlots.length;
   const totalPrice = court.pricePerHour * duration;
-
-  const formatTimer = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
 
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,6 +268,216 @@ export default function BookingModal({
     }
   };
 
+  // ── Inline mode (Step 3 embedded in the page) ──────────────────────────────
+  if (inlineMode) {
+    return (
+      <div className="booking-inline-checkout">
+        {/* Match Info Summary Pill */}
+        {/* <div className="inline-checkout-summary">
+          <div className="match-summary-item">
+            <span className="label">Court</span>
+            <span className="value highlight-text">
+              {court.name} ({court.subtitle})
+            </span>
+          </div>
+          <div className="match-summary-item">
+            <span className="label">Date</span>
+            <span className="value">{selectedDate}</span>
+          </div>
+          <div className="match-summary-item">
+            <span className="label">Time</span>
+            <span className="value">
+              {startTime} – {endTime} ({duration} hr)
+            </span>
+          </div>
+          <div className="match-summary-item">
+            <span className="label">Total Amount</span>
+            <span className="value price-tag">
+              ₹{totalPrice.toLocaleString()}
+            </span>
+          </div>
+        </div> */}
+
+        {errorMessage && (
+          <div className="modal-error-banner">
+            <span>⚠️ {errorMessage}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleConfirmBooking} className="modal-form">
+          {/* Player Information Fields */}
+          <div className="form-section">
+            <h4 className="form-section-title">👤 Player &amp; Team Details</h4>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="customerName">Full Name *</label>
+                <input
+                  id="customerName"
+                  type="text"
+                  required
+                  placeholder="Enter Name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="modal-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="customerPhone">
+                  Mobile Number (WhatsApp number)*
+                </label>
+                <input
+                  id="customerPhone"
+                  type="tel"
+                  required
+                  placeholder="Enter Mobile Number"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="modal-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="customerEmail">Email Address (Optional)</label>
+                <input
+                  id="customerEmail"
+                  type="email"
+                  placeholder="Enter email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  className="modal-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="teamName">Team / Club Name (Optional)</label>
+                <input
+                  id="teamName"
+                  type="text"
+                  placeholder="e.g. Perambalur Strikers"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  className="modal-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sport Selection */}
+          <div className="form-section">
+            <h4 className="form-section-title">⚽ Sport Type</h4>
+            <div className="sport-options-row">
+              {["Cricket", "Football"].map((s) => (
+                <label
+                  key={s}
+                  className={`sport-pill ${sportType === s ? "sport-active" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="sportType"
+                    value={s}
+                    checked={sportType === s}
+                    onChange={(e) => setSportType(e.target.value)}
+                  />
+                  <span>{s}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment Method */}
+          <div className="form-section">
+            <h4 className="form-section-title">💳 Payment Mode</h4>
+            <div className="payment-methods-grid">
+              <label
+                className={`payment-card ${paymentMethod === "UPI" ? "pay-active" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="UPI"
+                  checked={paymentMethod === "UPI"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                />
+                <div className="pay-card-content">
+                  <span className="pay-icon" aria-hidden="true">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        x="3"
+                        y="5"
+                        width="18"
+                        height="14"
+                        rx="2"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
+                      <path
+                        d="M3 9H21"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
+                      <path
+                        d="M7 14H10"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M14 13L12.5 16H15L13.5 18"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+
+                  <div>
+                    <strong>Instant UPI</strong>
+                    <p>GPay, PhonePe, Paytm</p>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Step 3 Footer Actions */}
+          <div className="inline-checkout-footer">
+            <button
+              type="button"
+              className="btn btn-ghost step-back-btn"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              ← Back to Details
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary confirm-btn"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className="btn-loading">
+                  <span className="loading-spinner small"></span> Verifying
+                  &amp; Booking...
+                </span>
+              ) : (
+                `Pay & Confirm Booking (₹${totalPrice.toLocaleString()}) →`
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // ── Legacy modal overlay mode (unchanged) ──────────────────────────────────
   return (
     <div className="modal-backdrop">
       <div className="modal-content-card">
@@ -348,7 +567,6 @@ export default function BookingModal({
                 >
                   <label htmlFor="customerPhone">
                     Mobile Number (WhatsApp number)*
-                    {/* <br /><span>Please enter valid (WhatsApp number)</span> */}
                   </label>
                   
                 </div>
