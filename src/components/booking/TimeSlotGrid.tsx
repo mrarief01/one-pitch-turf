@@ -55,7 +55,7 @@ export default function TimeSlotGrid({
       <div className="section-title-row">
         <div>
           {/* <span className="eyebrow">Step 3</span> */}
-          <h2 className="step-title">Select Available Time Slot</h2>
+          {/* <h2 className="step-title">Select Available Time Slot</h2> */}
         </div>
         {/* <p className="step-desc">
           Click to select one or multiple consecutive hours. Real-time
@@ -92,7 +92,7 @@ export default function TimeSlotGrid({
       {isLoading ? (
         <div className="slots-loading-state">
           <div className="loading-spinner"></div>
-          <p>Retrieving real-time court availability...</p>
+          {/* <p>Loading</p> */}
         </div>
       ) : (
         <div className="periods-container">

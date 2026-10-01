@@ -1,18 +1,23 @@
 "use client";
 
 import React from "react";
-import { CourtId, COURTS } from "@/lib/bookingStore";
+import { CourtId, CourtPricing, COURTS, PaymentType } from "@/lib/bookingStore";
 
 interface CourtSelectorProps {
   selectedCourt: CourtId;
   onSelectCourt: (court: CourtId) => void;
   availableCounts?: Record<CourtId, number>;
+  paymentType: PaymentType;
+  onPaymentTypeChange: (type: PaymentType) => void;
+  pricing?: Record<CourtId, CourtPricing>;
 }
 
 export default function CourtSelector({
   selectedCourt,
   onSelectCourt,
-  availableCounts,
+  paymentType,
+  onPaymentTypeChange,
+  pricing,
 }: CourtSelectorProps) {
   const courtList: CourtId[] = ["C1", "C2", "F"];
 
@@ -20,17 +25,50 @@ export default function CourtSelector({
     <div className="court-selector-section">
       <div className="section-title-row">
         <div>
-          <span className="eyebrow">Step 1</span>
-          <h2 className="step-title">Choose Court / Turf Area</h2>
+          {/* <span className="eyebrow">Step 1</span> */}
+          <h2 className="step-title">Choose Court & Payment Mode</h2>
         </div>
-        <p className="step-desc">Pick your court. Let’s get playing.</p>
+        <p className="step-desc">Pick your court and payment option.</p>
+      </div>
+
+      {/* Payment Mode Selector Buttons */}
+      <div className="payment-type-toggle flex gap-3 my-4">
+        <button
+          type="button"
+          className={`px-4 py-2 rounded-md font-semibold border ${
+            paymentType === "FULL"
+              ? "bg-green-600 text-white border-green-600"
+              : "bg-gray-800 text-gray-300 border-gray-700"
+          }`}
+          onClick={() => onPaymentTypeChange("FULL")}
+        >
+          Full Payment
+        </button>
+
+        <button
+          type="button"
+          className={`px-4 py-2 rounded-md font-semibold border ${
+            paymentType === "ADVANCE"
+              ? "bg-green-600 text-white border-green-600"
+              : "bg-gray-800 text-gray-300 border-gray-700"
+          }`}
+          onClick={() => onPaymentTypeChange("ADVANCE")}
+        >
+          Advance Payment
+        </button>
       </div>
 
       <div className="court-cards-grid">
         {courtList.map((courtId) => {
           const court = COURTS[courtId];
           const isSelected = selectedCourt === courtId;
-          const count = availableCounts ? availableCounts[courtId] : undefined;
+
+          const fullPrice =
+            pricing?.[courtId]?.fullPricePerHour ?? court.pricePerHour;
+          const advancePrice =
+            pricing?.[courtId]?.advancePricePerHour ?? court.pricePerHour / 2;
+          const activePrice =
+            paymentType === "ADVANCE" ? advancePrice : fullPrice;
 
           return (
             <div
@@ -48,10 +86,10 @@ export default function CourtSelector({
                 </div>
                 <div className="court-price-box">
                   <span className="currency">₹</span>
-                  <span className="amount">
-                    {court.pricePerHour.toLocaleString()}
+                  <span className="amount">{activePrice.toLocaleString()}</span>
+                  <span className="unit">
+                    / hour {paymentType === "ADVANCE" ? "(Adv)" : "(Full)"}
                   </span>
-                  <span className="unit">/ hour</span>
                 </div>
               </div>
 
