@@ -2,8 +2,8 @@ import {
   BookingRecord,
   CalculatedSlot,
   CourtId,
-  COURTS,
   MASTER_SLOTS,
+  PaymentType,
 } from "@/lib/bookingStore";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sendBookingConfirmationEmails } from "@/lib/email";
@@ -11,6 +11,7 @@ import {
   sendDualWhatsAppNotifications,
   WhatsAppNotificationResult,
 } from "@/lib/whatsappService";
+import { getCourtPricing } from "@/lib/pricingService";
 
 type DbBooking = {
   id: string;
@@ -45,21 +46,11 @@ export type BookingInput = {
   customerEmail: string;
   teamName?: string;
   sportType?: string;
+  paymentType: PaymentType;
 };
 
-/**
- * OnePitch operates in India time.
- *
- * IMPORTANT:
- * Vercel/server environments normally run in UTC,
- * so never depend on the server's local timezone for
- * booking availability calculations.
- */
 const BUSINESS_TIMEZONE = "Asia/Kolkata";
 
-/**
- * Get the current date/time specifically in India.
- */
 function getIndiaDateTime() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: BUSINESS_TIMEZONE,
@@ -83,60 +74,12 @@ function getIndiaDateTime() {
   };
 }
 
-/**
- * Convert India date parts to YYYY-MM-DD.
- */
 function getIndiaDate() {
   const indiaNow = getIndiaDateTime();
-
   return `${indiaNow.year}-${String(indiaNow.month).padStart(
     2,
     "0",
   )}-${String(indiaNow.day).padStart(2, "0")}`;
-}
-
-/**
- * Convert an hour value from MASTER_SLOTS into a comparable
- * absolute hour for the current business day.
- *
- * MASTER_SLOTS intentionally uses:
- *
- * 23 -> 24  = 11 PM -> 12 AM
- * 24 -> 25  = 12 AM -> 1 AM
- *
- * This keeps the slots in chronological order.
- */
-function isSlotFinished(
-  slot: (typeof MASTER_SLOTS)[number],
-  currentHour: number,
-  currentMinute: number,
-) {
-  /**
-   * Convert current India time into the same 24+ hour system
-   * used by MASTER_SLOTS.
-   *
-   * Example:
-   *
-   * 00:30 -> 24.5
-   * 01:00 -> 25
-   * 14:30 -> 14.5
-   */
-  const effectiveCurrentHour =
-    currentHour === 0
-      ? 24 + currentMinute / 60
-      : currentHour + currentMinute / 60;
-
-  /**
-   * A slot remains visible until its END time.
-   *
-   * Example:
-   * 13-14 (1 PM - 2 PM)
-   *
-   * 1:30 PM -> 13.5 < 14 -> visible
-   * 1:59 PM -> 13.98 < 14 -> visible
-   * 2:00 PM -> 14 >= 14 -> expired
-   */
-  return slot.endHour <= effectiveCurrentHour;
 }
 
 function mapBooking(b: DbBooking): BookingRecord {
@@ -165,7 +108,11 @@ function mapBooking(b: DbBooking): BookingRecord {
   };
 }
 
-function getSlotDetails(courtId: CourtId, slotIds: string[]) {
+export async function getSlotDetails(
+  courtId: CourtId,
+  slotIds: string[],
+  paymentType: PaymentType = "FULL",
+) {
   const selected = MASTER_SLOTS.filter((slot) =>
     slotIds.includes(slot.id),
   ).sort((a, b) => a.startHour - b.startHour);
@@ -174,11 +121,23 @@ function getSlotDetails(courtId: CourtId, slotIds: string[]) {
     throw new Error("One or more selected slots are invalid.");
   }
 
+  const pricing = await getCourtPricing();
+  const courtPricing = pricing[courtId];
+
+  if (!courtPricing) {
+    throw new Error(`Pricing not configured for court ${courtId}`);
+  }
+
+  const fullPrice = courtPricing.fullPricePerHour * selected.length;
+  const advancePrice = courtPricing.advancePricePerHour * selected.length;
+
   return {
     startTime: selected[0].startTime,
     endTime: selected.at(-1)!.endTime,
     duration: selected.length,
-    price: COURTS[courtId].pricePerHour * selected.length,
+    fullPrice,
+    advancePrice,
+    totalToPay: paymentType === "ADVANCE" ? advancePrice : fullPrice,
   };
 }
 
@@ -186,8 +145,14 @@ export async function getAvailability(
   courtId: CourtId,
   date: string,
 ): Promise<CalculatedSlot[]> {
-  const supabase = getSupabaseServerClient();
+  const pricing = await getCourtPricing();
+  const courtPricing = pricing[courtId];
 
+  if (!courtPricing) {
+    throw new Error(`Pricing not configured for court ${courtId}`);
+  }
+
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.rpc("active_booking_slots", {
     p_booking_date: date,
   });
@@ -201,33 +166,32 @@ export async function getAvailability(
     "court_id" | "slot_ids" | "status" | "held_until" | "team_name"
   >[];
 
-  /**
-   * Always calculate availability using India time.
-   */
   const indiaNow = getIndiaDateTime();
   const indiaDate = getIndiaDate();
-
   const today = indiaDate === date;
 
   return MASTER_SLOTS.map((slot) => {
-    const price = COURTS[courtId].pricePerHour;
+    const price = courtPricing.fullPricePerHour;
+    const advancePrice = courtPricing.advancePricePerHour;
 
-    if (
-      today &&
-      slot.startHour < 24 &&
-      (slot.startHour < indiaNow.hour ||
-        (slot.startHour === indiaNow.hour && indiaNow.minute >= 30))
-    ) {
+    const effectiveCurrentHour =
+      indiaNow.hour === 0
+        ? 24 + indiaNow.minute / 60
+        : indiaNow.hour + indiaNow.minute / 60;
+
+    const expiryHour = slot.startHour + 0.5;
+
+    if (today && effectiveCurrentHour >= expiryHour) {
       return {
         ...slot,
         price,
+        advancePrice,
         status: "EXPIRED" as const,
         conflictReason: "This time slot has expired.",
       };
     }
 
     const conflicts = bookings.filter((b) => b.slot_ids.includes(slot.id));
-
     const blocking = conflicts.find(
       (b) => b.court_id === "F" || courtId === "F" || b.court_id === courtId,
     );
@@ -236,6 +200,7 @@ export async function getAvailability(
       return {
         ...slot,
         price,
+        advancePrice,
         status: "AVAILABLE" as const,
       };
     }
@@ -246,6 +211,7 @@ export async function getAvailability(
     return {
       ...slot,
       price,
+      advancePrice,
       status: (sameCourt
         ? held
           ? "HELD"
@@ -263,12 +229,11 @@ export async function getAvailability(
 }
 
 export async function holdBooking(input: BookingInput) {
-  const details = getSlotDetails(input.courtId, input.slotIds);
-
-  /**
-   * Always check the latest availability before creating
-   * a booking hold.
-   */
+  const details = await getSlotDetails(
+    input.courtId,
+    input.slotIds,
+    input.paymentType,
+  );
   const availability = await getAvailability(input.courtId, input.date);
 
   if (
@@ -293,7 +258,7 @@ export async function holdBooking(input: BookingInput) {
     p_start_time: details.startTime,
     p_end_time: details.endTime,
     p_duration_hours: details.duration,
-    p_price_total: details.price,
+    p_price_total: details.totalToPay,
   });
 
   if (error) {
@@ -329,7 +294,12 @@ export async function confirmHeldBooking(
     paymentStatus?: "PAID" | "PENDING";
   },
 ) {
-  const details = getSlotDetails(input.courtId, input.slotIds);
+  // Fixed missing await
+  const details = await getSlotDetails(
+    input.courtId,
+    input.slotIds,
+    input.paymentType,
+  );
 
   const { data, error } = await getSupabaseServerClient().rpc(
     "confirm_booking",
@@ -359,14 +329,8 @@ export async function confirmHeldBooking(
   booking.startTime = details.startTime;
   booking.endTime = details.endTime;
   booking.durationHours = details.duration;
-  booking.priceTotal = details.price;
+  booking.priceTotal = details.totalToPay;
 
-  /**
-   * Fire booking-confirmed notifications.
-   *
-   * Notifications must never control whether the booking
-   * itself succeeds.
-   */
   const [, whatsappResult] = await Promise.allSettled([
     sendBookingConfirmationEmails(booking),
     sendDualWhatsAppNotifications(booking),

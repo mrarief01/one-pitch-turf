@@ -310,7 +310,7 @@ export default function BookingModal({
             <h4 className="form-section-title">👤 Player &amp; Team Details</h4>
             <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="customerName">Full Name *</label>
+                <label htmlFor="customerName">Your name *</label>
                 <input
                   id="customerName"
                   type="text"
@@ -330,19 +330,19 @@ export default function BookingModal({
                   id="customerPhone"
                   type="tel"
                   required
-                  placeholder="Enter Mobile Number"
+                  placeholder="eg: 941XXXXX"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   className="modal-input"
-                />
+                /> <label >This number will only be ued for sending  booking tickets</label>
               </div>
 
               <div className="form-group">
-                <label htmlFor="customerEmail">Email Address (Optional)</label>
+                <label htmlFor="customerEmail">Your email</label>
                 <input
                   id="customerEmail"
                   type="email"
-                  placeholder="Enter email"
+                  placeholder="eg: abc@gmail.com"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
                   className="modal-input"
@@ -386,7 +386,7 @@ export default function BookingModal({
           </div>
 
           {/* Payment Method */}
-          <div className="form-section">
+          {/* <div className="form-section">
             <h4 className="form-section-title">💳 Payment Mode</h4>
             <div className="payment-methods-grid">
               <label
@@ -445,7 +445,7 @@ export default function BookingModal({
                 </div>
               </label>
             </div>
-          </div>
+          </div> */}
 
           {/* Step 3 Footer Actions */}
           <div className="inline-checkout-footer">

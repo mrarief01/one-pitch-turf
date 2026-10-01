@@ -1806,7 +1806,7 @@ footer {
 
 .time-slot-section {
   background: var(--panel);
-  border: 1px solid var(--line);
+  /* border: 1px solid var(--line); */
   border-radius: 6px;
   padding: 24px;
 }
@@ -1910,8 +1910,8 @@ footer {
 }
 
 .slot-card-time {
-  font-family: var(--mono);
-  font-size: 0.78rem;
+  font-family: var(--body);
+  font-size: 0.75rem;
   color: var(--chalk);
   font-weight: 500;
 }
@@ -2375,7 +2375,7 @@ footer {
   font-family: var(--mono);
   font-size: 0.68rem;
   color: var(--muted);
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   margin-bottom: 6px;
 }
 
