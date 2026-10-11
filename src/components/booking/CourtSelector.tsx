@@ -9,7 +9,7 @@ interface CourtSelectorProps {
   availableCounts?: Record<CourtId, number>;
   paymentType: PaymentType;
   onPaymentTypeChange: (type: PaymentType) => void;
-  pricing?: Record<CourtId, CourtPricing>;
+  pricing?: Record<CourtId, CourtPricing> | null;
 }
 
 export default function CourtSelector({
@@ -32,26 +32,17 @@ export default function CourtSelector({
       </div>
 
       {/* Payment Mode Selector Buttons */}
-      <div className="payment-type-toggle flex gap-3 my-4">
+      <div className="payment-type-toggle">
         <button
           type="button"
-          className={`px-4 py-2 rounded-md font-semibold border ${
-            paymentType === "FULL"
-              ? "bg-green-600 text-white border-green-600"
-              : "bg-gray-800 text-gray-300 border-gray-700"
-          }`}
+          className={`switch-btn ${paymentType === "FULL" ? "selected" : ""}`}
           onClick={() => onPaymentTypeChange("FULL")}
         >
           Full Payment
         </button>
-
         <button
           type="button"
-          className={`px-4 py-2 rounded-md font-semibold border ${
-            paymentType === "ADVANCE"
-              ? "bg-green-600 text-white border-green-600"
-              : "bg-gray-800 text-gray-300 border-gray-700"
-          }`}
+          className={`switch-btn ${paymentType === "ADVANCE" ? "selected" : ""}`}
           onClick={() => onPaymentTypeChange("ADVANCE")}
         >
           Advance Payment
@@ -63,12 +54,12 @@ export default function CourtSelector({
           const court = COURTS[courtId];
           const isSelected = selectedCourt === courtId;
 
-          const fullPrice =
-            pricing?.[courtId]?.fullPricePerHour ?? court.pricePerHour;
-          const advancePrice =
-            pricing?.[courtId]?.advancePricePerHour ?? court.pricePerHour / 2;
-          const activePrice =
-            paymentType === "ADVANCE" ? advancePrice : fullPrice;
+          const row = pricing?.[courtId];
+          const activePrice = row
+            ? paymentType === "ADVANCE"
+              ? row.advancePricePerHour
+              : row.fullPricePerHour
+            : null;
 
           return (
             <div
@@ -86,7 +77,9 @@ export default function CourtSelector({
                 </div>
                 <div className="court-price-box">
                   <span className="currency">₹</span>
-                  <span className="amount">{activePrice.toLocaleString()}</span>
+                  <span className="amount">
+                    {activePrice === null ? "…" : activePrice.toLocaleString()}
+                  </span>{" "}
                   <span className="unit">
                     / hour {paymentType === "ADVANCE" ? "(Adv)" : "(Full)"}
                   </span>

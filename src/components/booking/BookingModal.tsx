@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CourtId, COURTS, CalculatedSlot, BookingRecord } from "@/lib/bookingStore";
+import {
+  CourtId,
+  COURTS,
+  CalculatedSlot,
+  BookingRecord,
+  PaymentType,
+  calcTotals,
+} from "@/lib/bookingStore";
 import { validatePhoneNumber } from "@/lib/phoneValidation";
 
 declare global {
@@ -25,7 +32,8 @@ function loadRazorpayCheckout(): Promise<void> {
 
 interface BookingModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
+  paymentType: PaymentType;
   selectedCourt: CourtId;
   selectedDate: string;
   selectedSlots: CalculatedSlot[];
@@ -41,6 +49,7 @@ interface BookingModalProps {
 export default function BookingModal({
   isOpen,
   onClose,
+  paymentType,
   selectedCourt,
   selectedDate,
   selectedSlots,
@@ -88,8 +97,6 @@ export default function BookingModal({
   // Handle hold expiration OUTSIDE the state updater (legacy modal only)
   useEffect(() => {
     if (inlineMode || !isOpen || timeLeft !== 0) return;
-
-    onClose();
     onAvailabilityConflict(
       "Your 5-minute temporary hold expired. Please reselect your slot.",
     );
@@ -117,8 +124,7 @@ export default function BookingModal({
   const startTime = sortedSlots[0]?.startTime || "";
   const endTime = sortedSlots[sortedSlots.length - 1]?.endTime || "";
   const duration = sortedSlots.length;
-  const totalPrice = court.pricePerHour * duration;
-
+  const { payNow: totalPrice } = calcTotals(sortedSlots, paymentType);
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -147,6 +153,7 @@ export default function BookingModal({
         customerEmail: customerEmail.trim(),
         teamName: teamName.trim() || undefined,
         sportType,
+        paymentType, // new; flows to create-order, verify-payment, bookings
       };
 
       if (paymentMethod === "UPI") {
@@ -334,7 +341,10 @@ export default function BookingModal({
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   className="modal-input"
-                /> <label >This number will only be ued for sending  booking tickets</label>
+                />{" "}
+                <label>
+                  This number will be used for sending booking tickets
+                </label>
               </div>
 
               <div className="form-group">
@@ -468,7 +478,7 @@ export default function BookingModal({
                   &amp; Booking...
                 </span>
               ) : (
-                `Pay & Confirm Booking (₹${totalPrice.toLocaleString()}) →`
+                `${paymentType === "ADVANCE" ? "Pay Advance" : "Pay & Confirm"} (₹${totalPrice.toLocaleString()}) →`
               )}
             </button>
           </div>
@@ -568,7 +578,6 @@ export default function BookingModal({
                   <label htmlFor="customerPhone">
                     Mobile Number (WhatsApp number)*
                   </label>
-                  
                 </div>
                 <input
                   id="customerPhone"

@@ -15,6 +15,7 @@ import BookingBreadcrumb, {
 } from "@/components/booking/BookingBreadcrumb";
 import {
   CourtId,
+  CourtPricing,
   PaymentType,
   CalculatedSlot,
   BookingRecord,
@@ -29,8 +30,16 @@ export default function BookingPage() {
   // ── Booking data state ──────────────────────────────────────────────────────
   const [selectedCourt, setSelectedCourt] = useState<CourtId>("C1");
   const [paymentType, setPaymentType] = useState<PaymentType>("FULL");
-  const pricingMap = {};
+  const [pricing, setPricing] = useState<Record<CourtId, CourtPricing> | null>(
+    null,
+  );
 
+  useEffect(() => {
+    fetch("/api/pricing", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => d.success && setPricing(d.pricing))
+      .catch((e) => console.error("Failed to load pricing:", e));
+  }, []);
   const [selectedDate, setSelectedDate] = useState<string>(() =>
     formatISODate(new Date()),
   );
@@ -364,10 +373,10 @@ export default function BookingPage() {
                     <div className="flow-step-card">
                       <CourtSelector
                         selectedCourt={selectedCourt}
-                        onSelectCourt={setSelectedCourt}
+                        onSelectCourt={handleCourtChange} // was setSelectedCourt
                         paymentType={paymentType}
                         onPaymentTypeChange={setPaymentType}
-                        pricing={pricingMap}
+                        pricing={pricing}
                       />
                     </div>
 
@@ -479,6 +488,7 @@ export default function BookingPage() {
                         <BookingModal
                           isOpen={true}
                           inlineMode={true}
+                          onClose={() => goToStep(2)} // was missing; the Back button did nothing
                           selectedCourt={selectedCourt}
                           selectedDate={selectedDate}
                           selectedSlots={selectedSlotObjects}
