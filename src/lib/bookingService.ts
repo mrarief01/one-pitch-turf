@@ -35,6 +35,8 @@ type DbBooking = {
   order_id: string | null;
   held_until: string | null;
   created_at: string;
+  payment_type: PaymentType;
+  balance_due: number;
 };
 
 export type BookingInput = {
@@ -46,7 +48,7 @@ export type BookingInput = {
   customerEmail: string;
   teamName?: string;
   sportType?: string;
-  paymentType: PaymentType;
+  paymentType?: PaymentType;
 };
 
 const BUSINESS_TIMEZONE = "Asia/Kolkata";
@@ -102,6 +104,8 @@ function mapBooking(b: DbBooking): BookingRecord {
     paymentMethod: "UPI",
     paymentStatus: b.payment_status,
     paymentId: b.payment_id || undefined,
+    paymentType: b.payment_type || "FULL",
+    balanceDue: b.balance_due || 0,
     orderId: b.order_id || undefined,
     heldUntil: b.held_until ? new Date(b.held_until).getTime() : undefined,
     createdAt: new Date(b.created_at).getTime(),
@@ -138,6 +142,7 @@ export async function getSlotDetails(
     fullPrice,
     advancePrice,
     totalToPay: paymentType === "ADVANCE" ? advancePrice : fullPrice,
+    balanceDue: paymentType === "ADVANCE" ? fullPrice - advancePrice : 0,
   };
 }
 
@@ -248,7 +253,7 @@ export async function holdBooking(input: BookingInput) {
     };
   }
 
-  const { data, error } = await getSupabaseServerClient().rpc("hold_booking", {
+    const { data, error } = await getSupabaseServerClient().rpc("hold_booking", {
     p_court_id: input.courtId,
     p_booking_date: input.date,
     p_slot_ids: input.slotIds,
@@ -259,6 +264,8 @@ export async function holdBooking(input: BookingInput) {
     p_end_time: details.endTime,
     p_duration_hours: details.duration,
     p_price_total: details.totalToPay,
+    p_payment_type: input.paymentType === "ADVANCE" ? "ADVANCE" : "FULL",
+    p_balance_due: details.balanceDue,
   });
 
   if (error) {
@@ -292,15 +299,9 @@ export async function confirmHeldBooking(
     orderId?: string;
     paymentId?: string;
     paymentStatus?: "PAID" | "PENDING";
+    paymentType?: PaymentType;
   },
 ) {
-  // Fixed missing await
-  const details = await getSlotDetails(
-    input.courtId,
-    input.slotIds,
-    input.paymentType,
-  );
-
   const { data, error } = await getSupabaseServerClient().rpc(
     "confirm_booking",
     {
@@ -324,12 +325,9 @@ export async function confirmHeldBooking(
     };
   }
 
+  // start/end time, duration, price_total, payment_type and balance_due
+  // all come from the row saved at hold time.
   const booking = mapBooking(data as DbBooking);
-
-  booking.startTime = details.startTime;
-  booking.endTime = details.endTime;
-  booking.durationHours = details.duration;
-  booking.priceTotal = details.totalToPay;
 
   const [, whatsappResult] = await Promise.allSettled([
     sendBookingConfirmationEmails(booking),
@@ -346,9 +344,5 @@ export async function confirmHeldBooking(
           details: String(whatsappResult.reason),
         };
 
-  return {
-    success: true as const,
-    booking,
-    notifications,
-  };
+  return { success: true as const, booking, notifications };
 }

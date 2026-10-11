@@ -107,6 +107,16 @@ export interface BookingRecord {
   orderId?: string;
   heldUntil?: number;
   createdAt: number;
+  paymentType?: PaymentType;
+  balanceDue?: number;
+}
+
+/** Single source of truth for totals. Slot prices come from the DB via /api/availability. */
+export function calcTotals(slots: CalculatedSlot[], paymentType: PaymentType) {
+  const full = slots.reduce((sum, s) => sum + s.price, 0);
+  const advance = slots.reduce((sum, s) => sum + s.advancePrice, 0);
+  const payNow = paymentType === "ADVANCE" ? advance : full;
+  return { full, advance, payNow, balanceDue: full - payNow };
 }
 
 const SLOT_CONFIGS: Array<
